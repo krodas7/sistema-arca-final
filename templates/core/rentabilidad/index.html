@@ -254,29 +254,45 @@
 
 <!-- Scripts para gráficos -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Datos para JavaScript -->
+<script>
+    // Datos de tendencias
+    window.tendenciasData = JSON.parse('{{ tendencias_json|default:"[]"|escapejs }}');
+    
+    // Datos de categorías
+    window.categoriasLabels = [
+        {% for item in gastos_por_categoria %}'{{ item.categoria__nombre|default:"Sin Categoría"|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+    window.categoriasData = [
+        {% for item in gastos_por_categoria %}{{ item.total }}{% if not forloop.last %},{% endif %}{% endfor %}
+    ];
+</script>
+
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Gráfico de tendencias mensuales
     const tendenciasCtx = document.getElementById('tendenciasChart').getContext('2d');
+    
     new Chart(tendenciasCtx, {
         type: 'line',
         data: {
-            labels: {{ tendencias_json|safe }}.map(item => item.mes),
+            labels: window.tendenciasData.map(item => item.mes),
             datasets: [{
                 label: 'Ingresos',
-                data: {{ tendencias_json|safe }}.map(item => parseFloat(item.ingresos)),
+                data: window.tendenciasData.map(item => parseFloat(item.ingresos)),
                 borderColor: 'rgb(75, 192, 192)',
                 backgroundColor: 'rgba(75, 192, 192, 0.2)',
                 tension: 0.1
             }, {
                 label: 'Gastos',
-                data: {{ tendencias_json|safe }}.map(item => parseFloat(item.gastos)),
+                data: window.tendenciasData.map(item => parseFloat(item.gastos)),
                 borderColor: 'rgb(255, 99, 132)',
                 backgroundColor: 'rgba(255, 99, 132, 0.2)',
                 tension: 0.1
             }, {
                 label: 'Rentabilidad',
-                data: {{ tendencias_json|safe }}.map(item => parseFloat(item.rentabilidad)),
+                data: window.tendenciasData.map(item => parseFloat(item.rentabilidad)),
                 borderColor: 'rgb(255, 205, 86)',
                 backgroundColor: 'rgba(255, 205, 86, 0.2)',
                 tension: 0.1
@@ -300,12 +316,13 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Gráfico de gastos por categoría
     const categoriasCtx = document.getElementById('categoriasChart').getContext('2d');
+    
     new Chart(categoriasCtx, {
         type: 'doughnut',
         data: {
-            labels: [{% for item in gastos_por_categoria %}'{{ item.categoria__nombre|default:"Sin Categoría" }}'{% if not forloop.last %}, {% endif %}{% endfor %}],
+            labels: window.categoriasLabels,
             datasets: [{
-                data: [{% for item in gastos_por_categoria %}{{ item.total }}{% if not forloop.last %}, {% endif %}{% endfor %}],
+                data: window.categoriasData,
                 backgroundColor: [
                     'rgb(255, 99, 132)',
                     'rgb(54, 162, 235)',

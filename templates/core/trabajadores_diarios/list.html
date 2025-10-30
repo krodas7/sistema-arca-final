@@ -78,11 +78,11 @@
                                     </p>
                                 </div>
                             {% else %}
-                                <div class="alert alert-warning mb-0">
-                                    <h6 class="alert-heading">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>Sin Planilla Seleccionada
-                                    </h6>
-                                    <p class="mb-0">Se muestran todos los trabajadores sin planilla asignada.</p>
+                                <div class="alert alert-light border-warning mb-0" style="font-size: 0.85rem;">
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        <strong>Sin planilla seleccionada</strong> - Mostrando todos los trabajadores sin planilla asignada
+                                    </small>
                                 </div>
                             {% endif %}
                         </div>
@@ -106,7 +106,7 @@
                     <i class="fas fa-file-pdf me-1"></i>Descargar PDF
                 </button>
                 {% if total_trabajadores > 0 %}
-                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#finalizarPlanillaModal">
+                <button type="button" class="btn btn-warning" id="btnFinalizarPlanilla">
                     <i class="fas fa-check-circle me-1"></i>Finalizar Planilla
                 </button>
                 {% endif %}
@@ -122,83 +122,6 @@
         </div>
     </div>
 
-    <!-- Selector de Planilla -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card shadow">
-                <div class="card-header py-3">
-                    <h6 class="m-0 font-weight-bold text-primary">
-                        <i class="fas fa-file-invoice-dollar me-2"></i>Seleccionar Planilla
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <label for="planillaSelector" class="form-label">
-                                <i class="fas fa-list me-1"></i>Planilla Actual:
-                            </label>
-                            <select class="form-select" id="planillaSelector" onchange="cambiarPlanilla()">
-                                <option value="">-- Sin planilla seleccionada --</option>
-                                {% for planilla in planillas %}
-                                    <option value="{{ planilla.id }}" 
-                                            {% if planilla_seleccionada and planilla.id == planilla_seleccionada.id %}selected{% endif %}>
-                                        {{ planilla.nombre }} 
-                                        {% if planilla.estado == 'activa' %}
-                                            <span class="badge bg-success">Activa</span>
-                                        {% elif planilla.estado == 'finalizada' %}
-                                            <span class="badge bg-info">Finalizada</span>
-                                        {% elif planilla.estado == 'archivada' %}
-                                            <span class="badge bg-secondary">Archivada</span>
-                                        {% endif %}
-                                        {% if planilla.fecha_inicio and planilla.fecha_fin %}
-                                            ({{ planilla.fecha_inicio|date:"d/m/Y" }} - {{ planilla.fecha_fin|date:"d/m/Y" }})
-                                        {% else %}
-                                            (Sin período definido)
-                                        {% endif %}
-                                    </option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="col-md-6">
-                            {% if planilla_seleccionada %}
-                                <div class="alert alert-light border-primary mb-0" style="font-size: 0.85rem;">
-                                    <h6 class="alert-heading text-primary" style="font-size: 0.9rem;">
-                                        <i class="fas fa-folder me-1"></i>Planilla Seleccionada
-                                    </h6>
-                                    <p class="mb-1"><strong>{{ planilla_seleccionada.nombre }}</strong></p>
-                                    <p class="mb-1">
-                                        <small class="text-muted">
-                                            Período: {% if planilla_seleccionada.fecha_inicio and planilla_seleccionada.fecha_fin %}{{ planilla_seleccionada.fecha_inicio|date:"d/m/Y" }} - {{ planilla_seleccionada.fecha_fin|date:"d/m/Y" }}{% else %}Sin período definido{% endif %}
-                                        </small>
-                                    </p>
-                                    <p class="mb-0">
-                                        <small class="text-muted">
-                                            Estado: 
-                                            {% if planilla_seleccionada.estado == 'activa' %}
-                                                <span class="badge bg-success">Activa</span>
-                                            {% elif planilla_seleccionada.estado == 'finalizada' %}
-                                                <span class="badge bg-info">Finalizada</span>
-                                            {% elif planilla_seleccionada.estado == 'archivada' %}
-                                                <span class="badge bg-secondary">Archivada</span>
-                                            {% endif %}
-                                        </small>
-                                    </p>
-                                </div>
-                            {% else %}
-                                <div class="alert alert-warning mb-0">
-                                    <h6 class="alert-heading">
-                                        <i class="fas fa-exclamation-triangle me-1"></i>Sin Planilla Seleccionada
-                                    </h6>
-                                    <p class="mb-0">Se muestran todos los trabajadores sin planilla asignada.</p>
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Administración de Anticipos -->
     <div class="row mb-4">
         <div class="col-12">
@@ -208,10 +131,10 @@
                         <i class="fas fa-money-bill-wave me-2"></i>Administración de Anticipos
                     </h6>
                     <div class="btn-group" role="group">
-                        <a href="{% url 'anticipo_trabajador_diario_create' proyecto.id %}" class="btn btn-sm btn-success">
+                        <a href="{% url 'anticipo_trabajador_diario_create' proyecto.id %}{% if planilla_seleccionada %}?planilla_id={{ planilla_seleccionada.id }}{% endif %}" class="btn btn-sm btn-success">
                             <i class="fas fa-plus me-1"></i>Nuevo Anticipo
                         </a>
-                        <a href="{% url 'anticipo_trabajador_diario_list' proyecto.id %}" class="btn btn-sm btn-info">
+                        <a href="{% url 'anticipo_trabajador_diario_list' proyecto.id %}{% if planilla_seleccionada %}?planilla_id={{ planilla_seleccionada.id }}{% endif %}" class="btn btn-sm btn-info">
                             <i class="fas fa-list me-1"></i>Ver Anticipos
                         </a>
                         <a href="{% url 'trabajadores_diarios_pdf' proyecto.id %}" class="btn btn-sm btn-warning">
@@ -310,12 +233,15 @@
             </h6>
         </div>
         <div class="card-body">
-            <!-- Mensaje informativo (más discreto) -->
+            <!-- Mensaje informativo (oculto por defecto, solo visible para usuarios nuevos) -->
+            {% if total_trabajadores == 0 or request.GET.mostrar_info == 'true' %}
             <div class="alert alert-light border-info mb-3" style="font-size: 0.9rem;">
+                <button type="button" class="btn-close float-end" onclick="this.parentElement.style.display='none'"></button>
                 <i class="fas fa-info-circle me-2 text-info"></i>
                 <strong class="text-info">💡 Información:</strong> Los trabajadores liquidados permanecen visibles para consulta histórica. 
                 Solo los trabajadores <span class="badge bg-success">Activos</span> pueden ser editados o eliminados.
             </div>
+            {% endif %}
             
             {% if trabajadores %}
                 <div class="table-responsive">
@@ -353,17 +279,20 @@
                                     {% if trabajador.activo %}
                                         <input type="number" 
                                                class="form-control form-control-sm dias-trabajados-input" 
-                                               value="0"
+                                               value="{% if trabajador.total_dias_trabajados > 0 %}{{ trabajador.total_dias_trabajados }}{% else %}0{% endif %}"
                                                data-trabajador-id="{{ trabajador.id }}"
                                                data-pago-diario="{{ trabajador.pago_diario }}"
                                                data-anticipos-aplicados="{{ trabajador.total_anticipos_aplicados }}"
                                                min="0"
                                                placeholder="Días"
-                                               style="width: 80px;">
-                                        <small class="text-muted">Temporal</small>
+                                               style="width: 80px;"
+                                               autocomplete="off"
+                                               inputmode="numeric"
+                                               data-form-type="other">
+                                        <small class="text-muted">Editable</small>
                                     {% else %}
                                         <span class="text-muted">
-                                            <i class="fas fa-lock me-1"></i>Liquidado
+                                            {{ trabajador.total_dias_trabajados }} días
                                         </span>
                                     {% endif %}
                                 </td>
@@ -581,32 +510,64 @@ document.addEventListener('DOMContentLoaded', function() {
     actualizarTotalesGenerales();
 });
 
-// Función para enviar días trabajados al finalizar planilla
-document.getElementById('finalizarPlanillaBtn').addEventListener('click', function(e) {
-    e.preventDefault();
+// Función para finalizar planilla directamente sin modal
+(function(){
+    const btn = document.getElementById('btnFinalizarPlanilla');
+    if (!btn) return;
     
-    // Obtener el formulario
-    const form = this.closest('form');
-    
-    // Agregar campos ocultos con los días trabajados
-    const trabajadores = document.querySelectorAll('.dias-trabajados-input');
-    trabajadores.forEach(input => {
-        const trabajadorId = input.getAttribute('data-trabajador-id');
-        const diasTrabajados = input.value || 0;
+    btn.addEventListener('click', function(e){
+        e.preventDefault();
+        e.stopImmediatePropagation();
         
-        // Crear campo oculto
-        const hiddenInput = document.createElement('input');
-        hiddenInput.type = 'hidden';
-        hiddenInput.name = `dias_trabajador_${trabajadorId}`;
-        hiddenInput.value = diasTrabajados;
-        form.appendChild(hiddenInput);
+        {% if planilla_seleccionada %}
+        if (!confirm('¿Finalizar la planilla "{{ planilla_seleccionada.nombre }}"?\n\nEsto:\n- Generará un PDF\n- Guardará el archivo\n- Registrará en histórico\n- Desactivará trabajadores de esta planilla')) {
+            return;
+        }
+        {% else %}
+        if (!confirm('¿Finalizar esta planilla? No hay planilla seleccionada.')) {
+            return;
+        }
+        {% endif %}
         
-        console.log(`🔍 Enviando días trabajados para trabajador ${trabajadorId}: ${diasTrabajados}`);
-    });
-    
-    // Enviar el formulario
-    form.submit();
-});
+        // Crear formulario
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '{% url "finalizar_planilla_trabajadores" proyecto.id %}';
+        
+        // CSRF
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        form.appendChild(csrfInput);
+        
+        {% if planilla_seleccionada %}
+        // Planilla ID
+        const planillaInput = document.createElement('input');
+        planillaInput.type = 'hidden';
+        planillaInput.name = 'planilla_id';
+        planillaInput.value = '{{ planilla_seleccionada.id }}';
+        form.appendChild(planillaInput);
+        {% endif %}
+        
+        // Días trabajados
+        document.querySelectorAll('.dias-trabajados-input').forEach(input => {
+            const trabajadorId = input.getAttribute('data-trabajador-id');
+            const diasTrabajados = input.value || 0;
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = `dias_trabajador_${trabajadorId}`;
+            hiddenInput.value = diasTrabajados;
+            form.appendChild(hiddenInput);
+        });
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Procesando...';
+        
+        document.body.appendChild(form);
+        setTimeout(function(){ form.submit(); }, 100);
+    }, { capture: true });
+})();
 
 // Función para cambiar la planilla seleccionada
 function cambiarPlanilla() {
@@ -647,14 +608,23 @@ function generarPDF() {
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle me-2"></i>
                     <strong>¿Está seguro que desea finalizar esta planilla?</strong>
+                    {% if planilla_seleccionada %}
+                        <p class="mt-2 mb-0"><strong>Planilla:</strong> {{ planilla_seleccionada.nombre }}</p>
+                    {% else %}
+                        <p class="mt-2 mb-0 text-danger"><i class="fas fa-exclamation-triangle"></i> No hay planilla seleccionada. Por favor selecciona una planilla primero.</p>
+                    {% endif %}
                 </div>
+                {% if planilla_seleccionada %}
                 <p>Esta acción realizará lo siguiente:</p>
                 <ul class="list-unstyled">
-                    <li><i class="fas fa-file-pdf text-success me-2"></i>Generará un PDF de la planilla actual</li>
-                    <li><i class="fas fa-folder-plus text-primary me-2"></i>Creará una carpeta "Trabajadores Diarios" en los archivos del proyecto</li>
-                    <li><i class="fas fa-save text-info me-2"></i>Guardará el PDF en la carpeta del proyecto</li>
-                    <li><i class="fas fa-trash text-danger me-2"></i>Limpiará la lista de trabajadores para una nueva planilla</li>
+                    <li><i class="fas fa-file-pdf text-success me-2"></i>Generará un PDF de la planilla "{{ planilla_seleccionada.nombre }}"</li>
+                    <li><i class="fas fa-save text-primary me-2"></i>Guardará el PDF en los archivos del proyecto</li>
+                    <li><i class="fas fa-file-alt text-info me-2"></i>Registrará esta planilla en el histórico de nómina</li>
+                    <li><i class="fas fa-archive text-warning me-2"></i>Marcará esta planilla como "Finalizada"</li>
+                    <li><i class="fas fa-user-times text-danger me-2"></i>Desactivará solo los trabajadores de esta planilla</li>
                 </ul>
+                <p class="text-muted"><small><i class="fas fa-info-circle"></i> Las demás planillas y sus trabajadores NO se verán afectados.</small></p>
+                {% endif %}
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <strong>Advertencia:</strong> Esta acción no se puede deshacer.
@@ -666,6 +636,9 @@ function generarPDF() {
                 </button>
                 <form method="post" action="{% url 'finalizar_planilla_trabajadores' proyecto.id %}" style="display: inline;">
                     {% csrf_token %}
+                    {% if planilla_seleccionada %}
+                        <input type="hidden" name="planilla_id" value="{{ planilla_seleccionada.id }}">
+                    {% endif %}
                     <button type="submit" class="btn btn-warning" id="finalizarPlanillaBtn">
                         <i class="fas fa-check-circle me-1"></i>Finalizar Planilla
                     </button>
@@ -698,25 +671,6 @@ function generarPDF() {
     
     // Enviar formulario
     document.getElementById('pdfForm').submit();
-}
-
-// CÓDIGO DUPLICADO ELIMINADO - El cálculo de totales ahora se hace en el script principal arriba
-
-// Función para cambiar planilla
-function cambiarPlanilla() {
-    const selector = document.getElementById('planillaSelector');
-    const planillaId = selector.value;
-    
-    // Construir la URL con el parámetro de planilla
-    const currentUrl = new URL(window.location);
-    if (planillaId) {
-        currentUrl.searchParams.set('planilla_id', planillaId);
-    } else {
-        currentUrl.searchParams.delete('planilla_id');
-    }
-    
-    // Redirigir a la nueva URL
-    window.location.href = currentUrl.toString();
 }
 
 // Función para reactivar un trabajador

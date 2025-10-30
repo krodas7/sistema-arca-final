@@ -312,13 +312,13 @@
                         </td>
                         <td>
                             <div class="d-flex gap-1 flex-wrap">
-                                <a href="{% url 'editar_anticipo' anticipo.id %}" class="btn-accion btn-editar" title="Editar Anticipo">
+                                <a href="{% url 'editar_anticipo' proyecto.id anticipo.id %}" class="btn-accion btn-editar" title="Editar Anticipo">
                                     <i class="fas fa-edit"></i> Editar
                                 </a>
-                                <a href="{% url 'cambiar_estado_anticipo' anticipo.id %}" class="btn-accion btn-estado" title="Cambiar Estado">
+                                <a href="{% url 'cambiar_estado_anticipo' proyecto.id anticipo.id %}" class="btn-accion btn-estado" title="Cambiar Estado">
                                     <i class="fas fa-exchange-alt"></i> Estado
                                 </a>
-                                <a href="{% url 'eliminar_anticipo' anticipo.id %}" class="btn-accion btn-eliminar" title="Eliminar Anticipo">
+                                <a href="{% url 'eliminar_anticipo' proyecto.id anticipo.id %}" class="btn-accion btn-eliminar" title="Eliminar Anticipo">
                                     <i class="fas fa-trash"></i> Eliminar
                                 </a>
                             </div>

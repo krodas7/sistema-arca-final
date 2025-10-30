@@ -67,10 +67,15 @@
         cursor: pointer;
     }
     
-    .btn-crear:hover {
+    .btn-crear:hover:not(:disabled) {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
         background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+    }
+    
+    .btn-crear:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
     
     .btn-cancelar {
@@ -161,7 +166,6 @@
         color: #388e3c;
     }
     
-    /* Estilos para el modal de confirmación */
     .modal-content {
         border-radius: 15px;
         border: none;
@@ -184,10 +188,6 @@
         background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
     }
     
-    .btn-close-white {
-        filter: invert(1);
-    }
-    
     @media (max-width: 768px) {
         .proyecto-header {
             padding: 1.5rem;
@@ -200,28 +200,20 @@
         .anticipo-container {
             padding: 1rem;
         }
-        
-        .modal-dialog {
-            margin: 1rem;
-        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="proyecto-header">
-    <h2>
-        <i class="fas fa-user-plus me-3"></i>Anticipo Individual
-    </h2>
+    <h2><i class="fas fa-user-plus me-3"></i>Anticipo Individual</h2>
     <p class="mb-0 mt-2">Proyecto: {{ proyecto.nombre }}</p>
 </div>
 
 <div class="anticipo-container">
     <!-- Información del Proyecto -->
     <div class="info-card">
-        <h5>
-            <i class="fas fa-info-circle me-2"></i>Información del Proyecto
-        </h5>
+        <h5><i class="fas fa-info-circle me-2"></i>Información del Proyecto</h5>
         <ul class="info-list">
             <li>
                 <span class="info-label">Nombre del Proyecto:</span>
@@ -244,29 +236,25 @@
     
     <!-- Vista Previa del Colaborador -->
     <div class="colaborador-preview" id="colaboradorPreview">
-        <h4>
-            <i class="fas fa-user me-2"></i>Información del Colaborador
-        </h4>
+        <h4><i class="fas fa-user me-2"></i>Información del Colaborador</h4>
         <div class="colaborador-info" id="colaboradorInfo"></div>
         <div class="colaborador-contact" id="colaboradorContact"></div>
     </div>
     
-    <!-- Formulario de Anticipo Individual -->
+    <!-- Formulario -->
     <form method="post" id="anticipoForm">
         {% csrf_token %}
         
         <div class="form-group">
-            <label for="colaborador" class="form-label">
-                <i class="fas fa-user me-2"></i>Seleccionar Colaborador
-            </label>
-            <select id="colaborador" name="colaborador" class="form-select" required onchange="mostrarColaborador()">
+            <label class="form-label"><i class="fas fa-user me-2"></i>Seleccionar Colaborador</label>
+            <select class="form-select" name="colaborador" id="sel_colaborador" required>
                 <option value="">-- Selecciona un colaborador --</option>
                 {% for colaborador in colaboradores_disponibles %}
                     <option value="{{ colaborador.id }}" 
-                            data-nombre="{{ colaborador.nombre }}"
+                            data-nom="{{ colaborador.nombre }}"
                             data-dpi="{{ colaborador.dpi|default:'Sin DPI' }}"
-                            data-email="{{ colaborador.email|default:'Sin email' }}"
-                            data-telefono="{{ colaborador.telefono|default:'Sin teléfono' }}">
+                            data-ema="{{ colaborador.email|default:'Sin email' }}"
+                            data-tel="{{ colaborador.telefono|default:'Sin teléfono' }}">
                         {{ colaborador.nombre }} {% if colaborador.dpi %}({{ colaborador.dpi }}){% endif %}
                     </option>
                 {% endfor %}
@@ -275,43 +263,20 @@
         </div>
         
         <div class="form-group">
-            <label for="monto" class="form-label">
-                <i class="fas fa-dollar-sign me-2"></i>Monto del Anticipo (Q)
-            </label>
-            <input type="number" 
-                   id="monto" 
-                   name="monto" 
-                   class="form-control" 
-                   step="0.01" 
-                   min="0.01" 
-                   required 
-                   placeholder="Ej: 200.00">
+            <label class="form-label"><i class="fas fa-dollar-sign me-2"></i>Monto del Anticipo (Q)</label>
+            <input type="number" name="monto" id="inp_monto" class="form-control" step="0.01" min="0.01" required placeholder="Ej: 200.00">
             <small class="text-muted">Ingresa el monto del anticipo</small>
         </div>
         
         <div class="form-group">
-            <label for="concepto" class="form-label">
-                <i class="fas fa-comment me-2"></i>Concepto del Anticipo
-            </label>
-            <input type="text" 
-                   id="concepto" 
-                   name="concepto" 
-                   class="form-control" 
-                   required 
-                   placeholder="Ej: Anticipo para gastos personales"
-                   value="Anticipo individual">
+            <label class="form-label"><i class="fas fa-comment me-2"></i>Concepto del Anticipo</label>
+            <input type="text" name="concepto" id="inp_concepto" class="form-control" required placeholder="Ej: Anticipo para gastos personales" value="Anticipo individual">
             <small class="text-muted">Descripción del motivo del anticipo</small>
         </div>
         
         <div class="form-group">
-            <label for="observaciones" class="form-label">
-                <i class="fas fa-sticky-note me-2"></i>Observaciones (Opcional)
-            </label>
-            <textarea id="observaciones" 
-                      name="observaciones" 
-                      class="form-control" 
-                      rows="3" 
-                      placeholder="Observaciones adicionales sobre el anticipo..."></textarea>
+            <label class="form-label"><i class="fas fa-sticky-note me-2"></i>Observaciones (Opcional)</label>
+            <textarea name="observaciones" id="txt_observaciones" class="form-control" rows="3" placeholder="Observaciones adicionales sobre el anticipo..."></textarea>
             <small class="text-muted">Información adicional sobre el anticipo</small>
         </div>
         
@@ -319,7 +284,7 @@
             <a href="{% url 'planilla_proyecto' proyecto.id %}" class="btn-cancelar">
                 <i class="fas fa-arrow-left me-2"></i>Cancelar
             </a>
-            <button type="submit" class="btn-crear" id="btnCrear" disabled>
+            <button type="submit" class="btn-crear" id="btn_crear" disabled>
                 <i class="fas fa-save me-2"></i>Crear Anticipo
             </button>
         </div>
@@ -327,48 +292,31 @@
 </div>
 
 <!-- Modal de Confirmación -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+<div class="modal fade" id="modal_confirmar" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="confirmModalLabel">
-                    <i class="fas fa-check-circle me-2"></i>Confirmar Anticipo
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Confirmar Anticipo</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
                 <div class="text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-user-circle fa-3x text-primary"></i>
-                    </div>
+                    <div class="mb-3"><i class="fas fa-user-circle fa-3x text-primary"></i></div>
                     <h6 class="mb-3">¿Confirmas crear este anticipo?</h6>
                     <div class="alert alert-info">
                         <div class="row">
-                            <div class="col-6">
-                                <strong>Colaborador:</strong><br>
-                                <span id="modalColaborador"></span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Monto:</strong><br>
-                                <span id="modalMonto" class="text-success fw-bold"></span>
-                            </div>
+                            <div class="col-6"><strong>Colaborador:</strong><br><span id="txt_colaborador_modal"></span></div>
+                            <div class="col-6"><strong>Monto:</strong><br><span id="txt_monto_modal" class="text-success fw-bold"></span></div>
                         </div>
                         <div class="row mt-2">
-                            <div class="col-12">
-                                <strong>Concepto:</strong><br>
-                                <span id="modalConcepto"></span>
-                            </div>
+                            <div class="col-12"><strong>Concepto:</strong><br><span id="txt_concepto_modal"></span></div>
                         </div>
                     </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Cancelar
-                </button>
-                <button type="button" class="btn btn-success" id="confirmSubmit">
-                    <i class="fas fa-check me-2"></i>Confirmar Anticipo
-                </button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-2"></i>Cancelar</button>
+                <button type="button" class="btn btn-success" id="btn_confirmar_submit"><i class="fas fa-check me-2"></i>Confirmar</button>
             </div>
         </div>
     </div>
@@ -377,93 +325,94 @@
 
 {% block extra_js %}
 <script>
-function mostrarColaborador() {
-    const select = document.getElementById('colaborador');
+// Mensaje para el usuario: Ignorar errores de content_script.js de Cursor
+console.log('%c⚠️  AVISO: Si ves errores de content_script.js, son de la extensión Cursor y NO afectan el funcionamiento.', 'color: #ff9800; font-weight: bold;');
+
+(function(){
+    'use strict';
+    
+    const form = document.getElementById('anticipoForm');
+    const selColab = document.getElementById('sel_colaborador');
+    const inpMonto = document.getElementById('inp_monto');
+    const inpConcepto = document.getElementById('inp_concepto');
+    const btnCrear = document.getElementById('btn_crear');
     const preview = document.getElementById('colaboradorPreview');
     const info = document.getElementById('colaboradorInfo');
     const contact = document.getElementById('colaboradorContact');
-    const btnCrear = document.getElementById('btnCrear');
     
-    if (select.value) {
-        const option = select.options[select.selectedIndex];
-        const nombre = option.getAttribute('data-nombre');
-        const dpi = option.getAttribute('data-dpi');
-        const email = option.getAttribute('data-email');
-        const telefono = option.getAttribute('data-telefono');
-        
-        info.innerHTML = `<strong>${nombre}</strong><br>DPI: ${dpi}`;
-        
-        let contactInfo = '';
-        if (email !== 'Sin email') {
-            contactInfo += `<i class="fas fa-envelope me-1"></i>${email}<br>`;
+    // Mostrar información del colaborador
+    selColab.onchange = function() {
+        const opt = this.options[this.selectedIndex];
+        if (this.value) {
+            const nombre = opt.getAttribute('data-nom') || '';
+            const dpi = opt.getAttribute('data-dpi') || '';
+            const email = opt.getAttribute('data-ema') || '';
+            const tel = opt.getAttribute('data-tel') || '';
+            
+            info.innerHTML = '<strong>' + nombre + '</strong><br>DPI: ' + dpi;
+            
+            let cont = '';
+            if (email !== 'Sin email') cont += '<i class="fas fa-envelope me-1"></i>' + email + '<br>';
+            if (tel !== 'Sin teléfono') cont += '<i class="fas fa-phone me-1"></i>' + tel;
+            
+            contact.innerHTML = cont || 'Sin información de contacto';
+            preview.style.display = 'block';
+            btnCrear.disabled = false;
+        } else {
+            preview.style.display = 'none';
+            btnCrear.disabled = true;
         }
-        if (telefono !== 'Sin teléfono') {
-            contactInfo += `<i class="fas fa-phone me-1"></i>${telefono}`;
+    };
+    
+    // Manejar envío del formulario
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        
+        const colab = selColab.value;
+        const monto = parseFloat(inpMonto.value);
+        
+        if (!colab) {
+            alert('Por favor selecciona un colaborador');
+            selColab.focus();
+            return false;
         }
         
-        contact.innerHTML = contactInfo || 'Sin información de contacto';
-        preview.style.display = 'block';
-        btnCrear.disabled = false;
-    } else {
-        preview.style.display = 'none';
-        btnCrear.disabled = true;
-    }
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Animación de entrada
+        if (monto <= 0 || isNaN(monto)) {
+            alert('Por favor ingresa un monto válido mayor a 0');
+            inpMonto.focus();
+            return false;
+        }
+        
+        // Confirmar antes de enviar
+        const opt = selColab.options[selColab.selectedIndex];
+        const confirmar = confirm(
+            '¿Confirmas crear este anticipo?\n\n' +
+            'Colaborador: ' + opt.text + '\n' +
+            'Monto: Q' + monto.toFixed(2) + '\n' +
+            'Concepto: ' + inpConcepto.value
+        );
+        
+        if (confirmar) {
+            // Deshabilitar botón y mostrar estado de carga
+            btnCrear.disabled = true;
+            btnCrear.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+            
+            // Enviar formulario
+            form.submit();
+        }
+        
+        return false;
+    };
+    
+    // Animación
     const container = document.querySelector('.anticipo-container');
     container.style.opacity = '0';
     container.style.transform = 'translateY(30px)';
-    
-    setTimeout(() => {
+    setTimeout(function() {
         container.style.transition = 'all 0.8s ease';
         container.style.opacity = '1';
         container.style.transform = 'translateY(0)';
     }, 200);
-    
-    // Validación del formulario
-    const form = document.getElementById('anticipoForm');
-    const montoInput = document.getElementById('monto');
-    const colaboradorSelect = document.getElementById('colaborador');
-    
-    form.addEventListener('submit', function(e) {
-        e.preventDefault(); // Siempre prevenir el envío por defecto
-        
-        const monto = parseFloat(montoInput.value);
-        const colaborador = colaboradorSelect.value;
-        
-        if (!colaborador) {
-            alert('Por favor selecciona un colaborador');
-            colaboradorSelect.focus();
-            return;
-        }
-        
-        if (monto <= 0) {
-            alert('Por favor ingresa un monto válido mayor a 0');
-            montoInput.focus();
-            return;
-        }
-        
-        // Mostrar modal de confirmación
-        const colaboradorNombre = colaboradorSelect.options[colaboradorSelect.selectedIndex].text;
-        const concepto = document.getElementById('concepto').value;
-        
-        // Llenar el modal con los datos
-        document.getElementById('modalColaborador').textContent = colaboradorNombre;
-        document.getElementById('modalMonto').textContent = `Q${monto.toFixed(2)}`;
-        document.getElementById('modalConcepto').textContent = concepto;
-        
-        // Mostrar el modal
-        const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
-        modal.show();
-    });
-    
-    // Manejar la confirmación del modal
-    document.getElementById('confirmSubmit').addEventListener('click', function() {
-        // Enviar el formulario
-        document.getElementById('anticipoForm').submit();
-    });
-});
+})();
 </script>
 {% endblock %}

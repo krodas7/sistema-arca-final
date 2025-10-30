@@ -6,13 +6,13 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
+import logging
+
+logger = logging.getLogger(__name__)
 from .models import (
     Rol, PerfilUsuario, Modulo, Permiso, RolPermiso, LogActividad
 )
 import json
-import logging
-
-logger = logging.getLogger(__name__)
 
 # ==================== GESTIÓN DE ROLES MEJORADA ====================
 
