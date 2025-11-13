@@ -10,6 +10,7 @@ const DYNAMIC_CACHE = 'arca-dynamic-v2.0.0';
 const STATIC_FILES = [
     '/',
     '/dashboard/',
+    '/offline/',
     '/static/css/global-styles.css',
     '/static/css/neostructure-theme.css',
     '/static/css/sidebar-layout.css',
@@ -96,6 +97,23 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
     
+    // Navegaciones (peticiones HTML completas)
+    if (request.mode === 'navigate') {
+        event.respondWith((async () => {
+            try {
+                return await fetch(request);
+            } catch (error) {
+                console.warn('⚠️ Service Worker: Navegación sin red, mostrando offline:', request.url);
+                const offlinePage = await caches.match('/offline/');
+                if (offlinePage) {
+                    return offlinePage;
+                }
+                return new Response('Sin conexión', { status: 503 });
+            }
+        })());
+        return;
+    }
+
     // Estrategia de cache para diferentes tipos de recursos
     if (request.method === 'GET') {
         // Archivos estáticos - Cache First
