@@ -10,7 +10,6 @@ const DYNAMIC_CACHE = 'arca-dynamic-v2.0.0';
 const STATIC_FILES = [
     '/',
     '/dashboard/',
-    '/offline/',
     '/static/css/global-styles.css',
     '/static/css/neostructure-theme.css',
     '/static/css/sidebar-layout.css',
@@ -175,12 +174,7 @@ async function networkFirstWithFallback(request, cacheName) {
         
         // Fallback a página offline
         if (request.headers.get('accept').includes('text/html')) {
-            const offlineResponse = await caches.match('/offline/');
-            if (offlineResponse) {
-                return offlineResponse;
-            }
-            
-            return new Response(`
+            return caches.match('/offline/') || new Response(`
                 <!DOCTYPE html>
                 <html>
                 <head>
