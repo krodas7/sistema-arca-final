@@ -203,18 +203,27 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.65rem;
         font-size: 0.85rem;
         opacity: 0.92;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.08em;
         font-weight: 600;
+        flex-wrap: wrap;
+        row-gap: 0.35rem;
     }
-
+    
     .project-card-header span {
         display: inline-flex;
         align-items: center;
         gap: 0.45rem;
+        flex: 1 1 auto;
+        min-width: 0;
+        white-space: nowrap;
+    }
+    
+    .project-card-header span:last-child {
+        justify-content: flex-end;
     }
 
     .project-card-body {
@@ -244,15 +253,17 @@
         opacity: 0;
         transform: translateY(12px);
         transition: all 0.3s ease;
+        flex-wrap: wrap;
     }
-
+    
     .project-card:hover .project-card-footer {
         opacity: 1;
         transform: translateY(0);
     }
-
+    
     .project-card-footer a {
-        flex: 1;
+        flex: 1 1 calc(50% - 0.4rem);
+        min-width: 120px;
         padding: 0.8rem 1rem;
         border-radius: 12px;
         font-weight: 600;
@@ -263,6 +274,7 @@
         text-decoration: none;
         transition: all 0.25s ease;
         backdrop-filter: blur(6px);
+        white-space: nowrap;
     }
 
     .action-primary {
@@ -349,8 +361,8 @@
             font-size: 1.9rem;
         }
 
-        .project-actions {
-            grid-template-columns: 1fr;
+        .project-card-footer a {
+            flex: 1 1 100%;
         }
     }
 </style>
@@ -391,7 +403,7 @@
                 {% for proyecto in proyectos %}
                     <article class="project-card status-theme-{{ proyecto.estado|default:'pendiente' }}">
                         <header class="project-card-header">
-                            <span><i class="fas fa-circle"></i> {{ proyecto.estado|title }}</span>
+                            <span><i class="fas fa-circle"></i> {{ proyecto.estado|default:"pendiente"|replace:"_"," "|title }}</span>
                             <span><i class="fas fa-file-alt"></i> {{ proyecto.total_archivos }} archivos</span>
                         </header>
                         <div class="project-card-body">
