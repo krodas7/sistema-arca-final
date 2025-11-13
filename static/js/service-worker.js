@@ -22,7 +22,6 @@ const STATIC_FILES = [
     '/static/js/pwa-register.js',
     '/static/js/dashboard-charts.js',
     '/static/manifest.json',
-    '/favicon.ico',
     '/static/images/icon-192x192-v2.png',
     '/static/images/icon-512x512-v2.png',
     '/static/images/icon-32x32.png',
@@ -217,21 +216,14 @@ async function staleWhileRevalidate(request, cacheName) {
     const cache = await caches.open(cacheName);
     const cachedResponse = await cache.match(request);
     
-    const fetchPromise = fetch(request)
-        .then((networkResponse) => {
-            if (networkResponse && networkResponse.ok) {
-                cache.put(request, networkResponse.clone());
-                return networkResponse;
-            }
-            return cachedResponse || new Response('Contenido no disponible', { status: 503 });
-        })
-        .catch(() => cachedResponse || new Response('Contenido no disponible', { status: 503 }));
+    const fetchPromise = fetch(request).then((networkResponse) => {
+        if (networkResponse.ok) {
+            cache.put(request, networkResponse.clone());
+        }
+        return networkResponse;
+    }).catch(() => cachedResponse);
     
-    if (cachedResponse) {
-        return cachedResponse;
-    }
-    
-    return fetchPromise;
+    return cachedResponse || fetchPromise;
 }
 
 // Manejar mensajes del cliente
