@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
@@ -562,46 +563,66 @@ def permisos_actualizar_masivo(request):
 
 @login_required
 def usuarios_dashboard(request):
-    """Dashboard con estadísticas de usuarios y permisos"""
+    """Dashboard con lista completa de usuarios y estadísticas"""
     if not request.user.is_superuser:
         messages.error(request, 'No tienes permisos para acceder a esta sección')
         return redirect('dashboard')
+    
+    # Búsqueda y filtros
+    search = request.GET.get('search', '')
+    rol_filter = request.GET.get('rol', '')
+    estado_filter = request.GET.get('estado', '')
+    
+    usuarios = User.objects.all().order_by('-date_joined')
+    
+    # Asegurar que todos los usuarios tengan perfil
+    for usuario in usuarios:
+        if not hasattr(usuario, 'perfilusuario'):
+            PerfilUsuario.objects.create(usuario=usuario)
+    
+    # Recargar con select_related
+    usuarios = User.objects.all().select_related('perfilusuario__rol').order_by('-date_joined')
+    
+    if search:
+        usuarios = usuarios.filter(
+            Q(username__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(last_name__icontains=search) |
+            Q(email__icontains=search)
+        )
+    
+    if rol_filter:
+        usuarios = usuarios.filter(perfilusuario__rol_id=rol_filter)
+    
+    if estado_filter == 'activo':
+        usuarios = usuarios.filter(is_active=True)
+    elif estado_filter == 'inactivo':
+        usuarios = usuarios.filter(is_active=False)
     
     # Estadísticas generales
     total_usuarios = User.objects.count()
     usuarios_activos = User.objects.filter(is_active=True).count()
     superusuarios = User.objects.filter(is_superuser=True).count()
     total_roles = Rol.objects.count()
-    total_permisos = Permiso.objects.count()
     
-    # Usuarios por rol
-    usuarios_por_rol = []
-    for rol in Rol.objects.all():
-        count = PerfilUsuario.objects.filter(rol=rol).count()
-        if count > 0:
-            usuarios_por_rol.append({
-                'rol': rol.nombre,
-                'count': count,
-                'porcentaje': round((count / total_usuarios) * 100, 1) if total_usuarios > 0 else 0
-            })
+    # Obtener roles para el filtro
+    roles = Rol.objects.all().order_by('nombre')
     
-    # Usuarios recientes
-    usuarios_recientes = User.objects.order_by('-date_joined')[:5]
-    
-    # Actividad reciente
-    actividad_reciente = LogActividad.objects.filter(
-        modulo__in=['Usuarios', 'Roles', 'Permisos']
-    ).order_by('-fecha_actividad')[:10]
+    # Paginación
+    paginator = Paginator(usuarios, 20)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
     
     context = {
+        'page_obj': page_obj,
+        'search': search,
+        'rol_filter': rol_filter,
+        'estado_filter': estado_filter,
+        'roles': roles,
         'total_usuarios': total_usuarios,
         'usuarios_activos': usuarios_activos,
         'superusuarios': superusuarios,
         'total_roles': total_roles,
-        'total_permisos': total_permisos,
-        'usuarios_por_rol': usuarios_por_rol,
-        'usuarios_recientes': usuarios_recientes,
-        'actividad_reciente': actividad_reciente,
     }
     
     return render(request, 'core/usuarios/dashboard.html', context)

@@ -1,491 +1,1003 @@
 {% extends 'base.html' %}
 {% load custom_filters %}
 
-{% block title %}Rentabilidad - Sistema de Construcción{% endblock %}
+{% block title %}Análisis de Rentabilidad - Sistema ARCA{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary-color: #1e3a8a;
+        --primary-light: #3b82f6;
+        --success-color: #059669;
+        --warning-color: #d97706;
+        --danger-color: #dc2626;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+    }
+    
+    body {
+        background: #f3f4f6;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .main-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    /* Header Section */
+    .page-header {
+        background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 25px rgba(124, 58, 237, 0.15);
+        color: white;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .page-header::before {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    
+    .header-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .page-subtitle {
+        margin: 0;
+        opacity: 0.9;
+        font-size: 1rem;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    /* Metrics Dashboard */
+    .metrics-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s;
+        border-left: 4px solid var(--accent-color);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card::after {
+        content: '';
+        position: absolute;
+        top: -20px;
+        right: -20px;
+        width: 100px;
+        height: 100px;
+        background: var(--accent-color);
+        opacity: 0.05;
+        border-radius: 50%;
+    }
+    
+    .metric-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+    }
+    
+    .metric-card.ingresos { --accent-color: var(--success-color); }
+    .metric-card.gastos { --accent-color: var(--danger-color); }
+    .metric-card.rentabilidad { --accent-color: var(--primary-color); }
+    .metric-card.margen { --accent-color: var(--warning-color); }
+    
+    .metric-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: var(--accent-color);
+        color: white;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .metric-value {
+        font-size: 2.25rem;
+        font-weight: 800;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        position: relative;
+        z-index: 1;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        position: relative;
+        z-index: 1;
+    }
+    
+    /* Control Panel */
+    .control-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    .control-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .control-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filters-row {
+        display: grid;
+        grid-template-columns: 1.5fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-select,
+    .filter-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9375rem;
+        transition: all 0.2s;
+    }
+    
+    .filter-select:focus,
+    .filter-input:focus {
+        outline: none;
+        border-color: #7c3aed;
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
+    }
+    
+    .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+    }
+    
+    .btn-filter {
+        background: #7c3aed;
+        color: white;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    .btn-filter:hover {
+        background: #6d28d9;
+        transform: translateY(-1px);
+    }
+    
+    .btn-secondary {
+        background: #f3f4f6;
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .btn-secondary:hover {
+        background: #e5e7eb;
+        color: var(--text-primary);
+    }
+    
+    .btn-export {
+        background: var(--success-color);
+        color: white;
+    }
+    
+    .btn-export:hover {
+        background: #047857;
+        color: white;
+    }
+    
+    /* Projects Analysis Section */
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .project-card {
+        background: #f9fafb;
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        padding: 1.25rem;
+        transition: all 0.3s;
+    }
+    
+    .project-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+    }
+    
+    .project-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .project-icon-small {
+        width: 36px;
+        height: 36px;
+        background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+    
+    .project-name-small {
+        font-weight: 600;
+        color: var(--text-primary);
+        flex: 1;
+    }
+    
+    .project-stats {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
+    
+    .project-stat-item {
+        text-align: center;
+        padding: 0.75rem;
+        background: white;
+        border-radius: 6px;
+    }
+    
+    .stat-value-small {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-primary);
+    }
+    
+    .stat-label-small {
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        margin-top: 0.25rem;
+    }
+    
+    .rentabilidad-indicator {
+        margin-top: 0.75rem;
+        padding: 0.75rem;
+        border-radius: 6px;
+        text-align: center;
+    }
+    
+    .rentabilidad-positive {
+        background: linear-gradient(135deg, #d1fae5, #a7f3d0);
+        color: #065f46;
+    }
+    
+    .rentabilidad-negative {
+        background: linear-gradient(135deg, #fee2e2, #fecaca);
+        color: #991b1b;
+    }
+    
+    .rentabilidad-value {
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+    }
+    
+    .empty-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+    }
+    
+    .row {
+        display: grid;
+        gap: 1.5rem;
+    }
+    
+    .row.mb-4 {
+        grid-template-columns: 2fr 1fr;
+        margin-bottom: 1.5rem !important;
+    }
+    
+    @media (max-width: 1024px) {
+        .row.mb-4 {
+            grid-template-columns: 1fr;
+        }
+        .filters-row {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+    
+    @media (max-width: 768px) {
+        .main-container {
+            padding: 1rem;
+        }
+        
+        .page-header {
+            padding: 1.5rem;
+        }
+        
+        .metrics-container {
+            grid-template-columns: 1fr;
+        }
+        
+        .filters-row {
+            grid-template-columns: 1fr;
+        }
+        
+        .projects-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">
-        <i class="fas fa-chart-line me-2"></i>Análisis de Rentabilidad
-    </h2>
-    <div class="d-flex gap-2">
-        <button class="btn btn-outline-primary" onclick="exportarReporte()">
-            <i class="fas fa-download me-2"></i>Exportar Reporte
-        </button>
-        <button class="btn btn-outline-secondary" onclick="imprimirReporte()">
-            <i class="fas fa-print me-2"></i>Imprimir
-        </button>
-    </div>
-</div>
-
-<!-- Filtros de período -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h6 class="mb-0">
-            <i class="fas fa-filter me-2"></i>Filtros de Período
-        </h6>
-    </div>
-    <div class="card-body">
-        <form method="get" class="row g-3">
-            <div class="col-md-3">
-                <label for="periodo" class="form-label">Período</label>
-                <select name="periodo" id="periodo" class="form-select">
-                    <option value="todos" {% if periodo == 'todos' %}selected{% endif %}>Todos los Datos</option>
-                    <option value="mes" {% if periodo == 'mes' %}selected{% endif %}>Último Mes</option>
-                    <option value="trimestre" {% if periodo == 'trimestre' %}selected{% endif %}>Último Trimestre</option>
-                    <option value="año" {% if periodo == 'año' %}selected{% endif %}>Último Año</option>
-                    <option value="personalizado" {% if periodo == 'personalizado' %}selected{% endif %}>Personalizado</option>
-                </select>
+<div class="main-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div>
+                <div class="page-title">
+                    <i class="fas fa-chart-line"></i>
+                    <h1 style="margin: 0;">Análisis de Rentabilidad</h1>
+                </div>
+                <p class="page-subtitle">Panorama financiero completo de la empresa</p>
             </div>
-            <div class="col-md-3">
-                <label for="fecha_inicio" class="form-label">Fecha Inicio</label>
-                <input type="date" name="fecha_inicio" id="fecha_inicio" class="form-control" value="{% if periodo != 'todos' %}{{ fecha_inicio }}{% endif %}">
-            </div>
-            <div class="col-md-3">
-                <label for="fecha_fin" class="form-label">Fecha Fin</label>
-                <input type="date" name="fecha_fin" id="fecha_fin" class="form-control" value="{% if periodo != 'todos' %}{{ fecha_fin }}{% endif %}">
-            </div>
-            <div class="col-md-3 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary me-2">
-                    <i class="fas fa-search me-2"></i>Filtrar
-                </button>
-                <a href="{% url 'rentabilidad' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-undo me-2"></i>Reset
+            <div class="header-actions">
+                <a href="{% url 'rentabilidad_exportar_pdf' %}?periodo={{ periodo }}{% if fecha_inicio %}&fecha_inicio={{ fecha_inicio }}{% endif %}{% if fecha_fin %}&fecha_fin={{ fecha_fin }}{% endif %}" 
+                   class="btn btn-export">
+                    <i class="fas fa-file-pdf"></i> Exportar PDF
                 </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Metrics Dashboard -->
+    <div class="metrics-container">
+        <div class="metric-card ingresos">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-arrow-circle-up"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ ingresos|currency_gtq }}</div>
+            <div class="metric-label">Ingresos Totales</div>
+        </div>
+        
+        <div class="metric-card gastos">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-arrow-circle-down"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ gastos|currency_gtq }}</div>
+            <div class="metric-label">Gastos Totales</div>
+        </div>
+        
+        <div class="metric-card rentabilidad">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+            </div>
+            <div class="metric-value" style="color: {% if rentabilidad_neta >= 0 %}var(--success-color){% else %}var(--danger-color){% endif %};">
+                {{ rentabilidad_neta|currency_gtq }}
+            </div>
+            <div class="metric-label">Rentabilidad Neta</div>
+        </div>
+        
+        <div class="metric-card margen">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-percentage"></i>
+                </div>
+            </div>
+            <div class="metric-value" style="color: {% if margen_rentabilidad >= 0 %}var(--success-color){% else %}var(--danger-color){% endif %};">
+                {{ margen_rentabilidad|floatformat:1 }}%
+            </div>
+            <div class="metric-label">Margen de Rentabilidad</div>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="control-header">
+            <div class="control-title">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Filtros de Período</span>
+            </div>
+        </div>
+        
+        <form method="GET">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label><i class="fas fa-clock me-1"></i> Período</label>
+                    <select name="periodo" id="periodo" class="filter-select" onchange="toggleDateInputs()">
+                        <option value="todos" {% if periodo == 'todos' %}selected{% endif %}>Todos los Datos</option>
+                        <option value="mes" {% if periodo == 'mes' %}selected{% endif %}>Último Mes</option>
+                        <option value="trimestre" {% if periodo == 'trimestre' %}selected{% endif %}>Último Trimestre</option>
+                        <option value="año" {% if periodo == 'año' %}selected{% endif %}>Último Año</option>
+                        <option value="personalizado" {% if periodo == 'personalizado' %}selected{% endif %}>Personalizado</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group" id="fechaInicioGroup">
+                    <label><i class="fas fa-calendar-day me-1"></i> Fecha Inicio</label>
+                    <input type="date" 
+                           name="fecha_inicio" 
+                           id="fecha_inicio" 
+                           class="filter-input" 
+                           value="{{ fecha_inicio }}">
+                </div>
+                
+                <div class="filter-group" id="fechaFinGroup">
+                    <label><i class="fas fa-calendar-day me-1"></i> Fecha Fin</label>
+                    <input type="date" 
+                           name="fecha_fin" 
+                           id="fecha_fin" 
+                           class="filter-input" 
+                           value="{{ fecha_fin }}">
+                </div>
+                
+                <div class="filter-group">
+                    <button type="submit" class="btn btn-filter">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
             </div>
         </form>
     </div>
-</div>
 
-<!-- Resumen General -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card border-success">
-            <div class="card-body text-center">
-                <h5 class="card-title text-success">
-                    <i class="fas fa-arrow-up me-2"></i>Ingresos
-                </h5>
-                <h3 class="text-success">{{ingresos|currency_format}}</h3>
-                <small class="text-muted">Período seleccionado</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-danger">
-            <div class="card-body text-center">
-                <h5 class="card-title text-danger">
-                    <i class="fas fa-arrow-down me-2"></i>Gastos
-                </h5>
-                <h3 class="text-danger">{{gastos|currency_format}}</h3>
-                <small class="text-muted">Período seleccionado</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-warning">
-            <div class="card-body text-center">
-                <h5 class="card-title text-warning">
-                    <i class="fas fa-chart-line me-2"></i>Rentabilidad Neta
-                </h5>
-                <h3 class="{% if rentabilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {{rentabilidad_neta|currency_format}}
-                </h3>
-                <small class="text-muted">Ingresos - Gastos - Fijos</small>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card border-info">
-            <div class="card-body text-center">
-                <h5 class="card-title text-info">
-                    <i class="fas fa-percentage me-2"></i>Margen
-                </h5>
-                <h3 class="{% if margen_rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
-                    {{ margen_rentabilidad|floatformat:1 }}%
-                </h3>
-                <small class="text-muted">Rentabilidad/Ingresos</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Gráficos y Análisis -->
-<div class="row">
-    <!-- Tendencias Mensuales -->
-    <div class="col-lg-8 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-chart-area me-2"></i>Tendencias Mensuales (Últimos 12 meses)
-                </h6>
-            </div>
-            <div class="card-body">
-                <canvas id="tendenciasChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Gastos por Categoría -->
-    <div class="col-lg-4 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-pie-chart me-2"></i>Gastos por Categoría
-                </h6>
-            </div>
-            <div class="card-body">
-                <canvas id="categoriasChart" width="400" height="200"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Rentabilidad por Proyecto -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h6 class="mb-0">
-            <i class="fas fa-project-diagram me-2"></i>Rentabilidad por Proyecto
-        </h6>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover">
-                <thead>
-                    <tr>
-                        <th>Proyecto</th>
-                        <th>Cliente</th>
-                        <th>Ingresos</th>
-                        <th>Gastos</th>
-                        <th>Rentabilidad</th>
-                        <th>Margen</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for item in proyectos_rentabilidad %}
-                    <tr>
-                        <td>
-                            <strong>{{ item.proyecto.nombre }}</strong>
-                        </td>
-                                                        <td>{{ item.proyecto.cliente.razon_social }}</td>
-                        <td class="text-success">{{item.ingresos|currency_format}}</td>
-                        <td class="text-danger">{{item.gastos|currency_format}}</td>
-                        <td class="{% if item.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{item.rentabilidad|currency_format}}
-                        </td>
-                        <td class="{% if item.margen >= 0 %}text-success{% else %}text-danger{% endif %}">
-                            {{ item.margen|floatformat:1 }}%
-                        </td>
-                        <td>
-                            <span class="badge bg-{% if item.proyecto.estado == 'completado' %}success{% elif item.proyecto.estado == 'en_progreso' %}warning{% else %}secondary{% endif %}">
-                                {{ item.proyecto.get_estado_display }}
-                            </span>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="7" class="text-center text-muted">
-                            <i class="fas fa-info-circle me-2"></i>No hay proyectos con datos en el período seleccionado
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Análisis Detallado -->
-<div class="row">
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-list me-2"></i>Top 5 Proyectos Más Rentables
-                </h6>
-            </div>
-            <div class="card-body">
-                {% for item in proyectos_rentabilidad|slice:":5" %}
-                <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
-                    <div>
-                        <strong>{{ item.proyecto.nombre }}</strong><br>
-                        <small class="text-muted">{{ item.proyecto.cliente.razon_social }}</small>
-                    </div>
-                    <div class="text-end">
-                        <span class="badge bg-success">{{item.rentabilidad|currency_format}}</span><br>
-                        <small class="text-muted">{{ item.margen|floatformat:1 }}%</small>
-                    </div>
+    <!-- Charts Section -->
+    <div class="row mb-4">
+        <div>
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="fas fa-chart-bar"></i>
+                    <span>Tendencia de Rentabilidad (Últimos 12 meses)</span>
                 </div>
-                {% endfor %}
+                <div style="position: relative; height: 350px;">
+                    <canvas id="rentabilidadChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <div>
+            <div class="section-card">
+                <div class="section-title">
+                    <i class="fas fa-chart-pie"></i>
+                    <span>Distribución</span>
+                </div>
+                <div style="position: relative; height: 350px; display: flex; align-items: center; justify-content: center;">
+                    <canvas id="distribucionChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
-    
-    <div class="col-md-6 mb-4">
-        <div class="card">
-            <div class="card-header">
-                <h6 class="mb-0">
-                    <i class="fas fa-exclamation-triangle me-2"></i>Proyectos con Pérdidas
-                </h6>
-            </div>
-            <div class="card-body">
+
+    <!-- Gastos por Categoría Chart -->
+    {% if gastos_por_categoria %}
+    <div class="section-card">
+        <div class="section-title">
+            <i class="fas fa-tags"></i>
+            <span>Gastos por Categoría</span>
+        </div>
+        <div style="position: relative; height: 300px;">
+            <canvas id="gastosCategoriasChart"></canvas>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Projects Analysis -->
+    <div class="section-card">
+        <div class="section-title">
+            <i class="fas fa-building"></i>
+            <span>Rentabilidad por Proyecto</span>
+        </div>
+        
+        {% if proyectos_rentabilidad %}
+            <div class="projects-grid">
                 {% for item in proyectos_rentabilidad %}
-                    {% if item.rentabilidad < 0 %}
-                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded border-danger">
-                        <div>
-                            <strong>{{ item.proyecto.nombre }}</strong><br>
-                            <small class="text-muted">{{ item.proyecto.cliente.razon_social }}</small>
+                <div class="project-card">
+                    <div class="project-header">
+                        <div class="project-icon-small">
+                            {{ item.proyecto.nombre|first|upper }}
                         </div>
-                        <div class="text-end">
-                            <span class="badge bg-danger">{{item.rentabilidad|currency_format}}</span><br>
-                            <small class="text-muted">{{ item.margen|floatformat:1 }}%</small>
+                        <div class="project-name-small">{{ item.proyecto.nombre }}</div>
+                    </div>
+                    
+                    <div class="project-stats">
+                        <div class="project-stat-item">
+                            <div class="stat-value-small" style="color: var(--success-color);">
+                                {{ item.ingresos|currency_gtq }}
+                            </div>
+                            <div class="stat-label-small">Ingresos</div>
+                        </div>
+                        <div class="project-stat-item">
+                            <div class="stat-value-small" style="color: var(--danger-color);">
+                                {{ item.gastos|currency_gtq }}
+                            </div>
+                            <div class="stat-label-small">Gastos</div>
                         </div>
                     </div>
-                    {% endif %}
-                {% empty %}
-                <div class="text-center text-muted">
-                    <i class="fas fa-check-circle me-2"></i>¡Excelente! No hay proyectos con pérdidas
+                    
+                    <div class="rentabilidad-indicator {% if item.rentabilidad >= 0 %}rentabilidad-positive{% else %}rentabilidad-negative{% endif %}">
+                        <div style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; margin-bottom: 0.25rem;">
+                            Rentabilidad
+                        </div>
+                        <div class="rentabilidad-value">
+                            {{ item.rentabilidad|currency_gtq }}
+                        </div>
+                        <div style="font-size: 0.8rem; margin-top: 0.25rem;">
+                            Margen: {{ item.margen|floatformat:1 }}%
+                        </div>
+                    </div>
                 </div>
                 {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h4>No hay proyectos activos</h4>
+                <p>Crea proyectos para ver análisis de rentabilidad</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Info Panel -->
+    <div class="section-card">
+        <div style="background: linear-gradient(135deg, #ede9fe, #ddd6fe); padding: 1.5rem; border-radius: 10px;">
+            <h6 style="font-weight: 700; color: var(--text-primary); margin-bottom: 1rem;">
+                <i class="fas fa-info-circle me-2"></i>Acerca de este Análisis
+            </h6>
+            <div style="display: grid; gap: 0.75rem; color: var(--text-secondary); font-size: 0.9rem;">
+                <p style="margin: 0;">
+                    <strong style="color: var(--text-primary);">📊 Ingresos:</strong> 
+                    Incluye facturas pagadas y anticipos aplicados de todos los proyectos
+                </p>
+                <p style="margin: 0;">
+                    <strong style="color: var(--text-primary);">💰 Gastos:</strong> 
+                    Suma de todos los gastos aprobados en el período seleccionado
+                </p>
+                <p style="margin: 0;">
+                    <strong style="color: var(--text-primary);">📈 Rentabilidad Neta:</strong> 
+                    Ingresos menos gastos totales (muestra la utilidad real)
+                </p>
+                <p style="margin: 0;">
+                    <strong style="color: var(--text-primary);">📊 Margen:</strong> 
+                    Porcentaje de utilidad sobre los ingresos totales
+                </p>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Scripts para gráficos -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<!-- Datos para JavaScript -->
-<script>
-    // Datos de tendencias
-    window.tendenciasData = JSON.parse('{{ tendencias_json|default:"[]"|escapejs }}');
-    
-    // Datos de categorías
-    window.categoriasLabels = [
-        {% for item in gastos_por_categoria %}'{{ item.categoria__nombre|default:"Sin Categoría"|escapejs }}'{% if not forloop.last %},{% endif %}{% endfor %}
-    ];
-    window.categoriasData = [
-        {% for item in gastos_por_categoria %}{{ item.total }}{% if not forloop.last %},{% endif %}{% endfor %}
-    ];
-</script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Gráfico de tendencias mensuales
-    const tendenciasCtx = document.getElementById('tendenciasChart').getContext('2d');
-    
-    new Chart(tendenciasCtx, {
-        type: 'line',
-        data: {
-            labels: window.tendenciasData.map(item => item.mes),
-            datasets: [{
-                label: 'Ingresos',
-                data: window.tendenciasData.map(item => parseFloat(item.ingresos)),
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.2)',
-                tension: 0.1
-            }, {
-                label: 'Gastos',
-                data: window.tendenciasData.map(item => parseFloat(item.gastos)),
-                borderColor: 'rgb(255, 99, 132)',
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                tension: 0.1
-            }, {
-                label: 'Rentabilidad',
-                data: window.tendenciasData.map(item => parseFloat(item.rentabilidad)),
-                borderColor: 'rgb(255, 205, 86)',
-                backgroundColor: 'rgba(255, 205, 86, 0.2)',
-                tension: 0.1
-            }]
+// Verificar que Chart.js esté cargado
+if (typeof Chart === 'undefined') {
+    console.error('Chart.js no se cargó correctamente');
+}
+
+// Datos de tendencias desde el servidor
+const tendenciasData = {{ tendencias_json|safe }};
+console.log('Tendencias data:', tendenciasData);
+
+// Gráfico de líneas - Tendencia de Rentabilidad
+const ctxLinea = document.getElementById('rentabilidadChart');
+if (ctxLinea && tendenciasData && tendenciasData.length > 0) {
+    try {
+        new Chart(ctxLinea, {
+            type: 'line',
+            data: {
+                labels: tendenciasData.map(t => t.mes),
+                datasets: [
+                {
+                    label: 'Ingresos',
+                    data: tendenciasData.map(t => parseFloat(t.ingresos)),
+                    borderColor: '#059669',
+                    backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Gastos',
+                    data: tendenciasData.map(t => parseFloat(t.gastos)),
+                    borderColor: '#dc2626',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                },
+                {
+                    label: 'Rentabilidad',
+                    data: tendenciasData.map(t => parseFloat(t.rentabilidad)),
+                    borderColor: '#7c3aed',
+                    backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }
+            ]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Evolución Financiera Mensual'
+                legend: {
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 12
+                    },
+                    callbacks: {
+                        label: function(context) {
+                            return context.dataset.label + ': Q' + context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        }
+                    }
                 }
             },
             scales: {
                 y: {
-                    beginAtZero: true
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'Q' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                        },
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                },
+                x: {
+                    ticks: {
+                        font: {
+                            size: 11
+                        }
+                    },
+                    grid: {
+                        display: false
+                    }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('Error creando gráfico de tendencias:', error);
+        ctxLinea.parentElement.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No hay datos suficientes para mostrar el gráfico</div>';
+    }
+} else {
+    if (ctxLinea) {
+        ctxLinea.parentElement.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No hay datos disponibles</div>';
+    }
+}
+
+// Gráfico de dona - Distribución
+const ctxDona = document.getElementById('distribucionChart');
+if (ctxDona) {
+    const ingresos = parseFloat({{ ingresos|default:0 }});
+    const gastos = parseFloat({{ gastos|default:0 }});
+    const rentabilidad = parseFloat({{ rentabilidad_neta|default:0 }});
     
-    // Gráfico de gastos por categoría
-    const categoriasCtx = document.getElementById('categoriasChart').getContext('2d');
+    console.log('Distribución - Ingresos:', ingresos, 'Gastos:', gastos, 'Rentabilidad:', rentabilidad);
     
-    new Chart(categoriasCtx, {
+    if (ingresos > 0 || gastos > 0) {
+        try {
+            new Chart(ctxDona, {
         type: 'doughnut',
         data: {
-            labels: window.categoriasLabels,
+            labels: ['Ingresos', 'Gastos', 'Rentabilidad'],
             datasets: [{
-                data: window.categoriasData,
+                data: [
+                    ingresos,
+                    gastos,
+                    rentabilidad > 0 ? rentabilidad : 0
+                ],
                 backgroundColor: [
-                    'rgb(255, 99, 132)',
-                    'rgb(54, 162, 235)',
-                    'rgb(255, 205, 86)',
-                    'rgb(75, 192, 192)',
-                    'rgb(153, 102, 255)',
-                    'rgb(255, 159, 64)'
-                ]
+                    '#059669',
+                    '#dc2626',
+                    '#7c3aed'
+                ],
+                borderWidth: 3,
+                borderColor: '#fff',
+                hoverOffset: 10
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Distribución de Gastos'
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 15,
+                        font: {
+                            size: 12,
+                            weight: '600'
+                        }
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    padding: 12,
+                    titleFont: {
+                        size: 13,
+                        weight: 'bold'
+                    },
+                    bodyFont: {
+                        size: 12
+                    },
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.parsed || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                            return label + ': Q' + value.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",") + ' (' + percentage + '%)';
+                        }
+                    }
                 }
             }
-        }
-    });
-});
-
-// Funciones de exportación e impresión
-function exportarReporte() {
-    // Crear menú desplegable para seleccionar formato
-    const menu = document.createElement('div');
-    menu.className = 'dropdown-menu show';
-    menu.style.position = 'absolute';
-    menu.style.zIndex = '1000';
-    menu.innerHTML = `
-        <a class="dropdown-item" href="#" onclick="exportarPDF()">
-            <i class="fas fa-file-pdf me-2"></i>Exportar PDF
-        </a>
-        <a class="dropdown-item" href="#" onclick="exportarExcel()">
-            <i class="fas fa-file-excel me-2"></i>Exportar Excel
-        </a>
-    `;
-    
-    // Posicionar el menú cerca del botón
-    const boton = event.target.closest('button');
-    const rect = boton.getBoundingClientRect();
-    menu.style.top = (rect.bottom + 5) + 'px';
-    menu.style.left = rect.left + 'px';
-    
-    // Agregar al DOM
-    document.body.appendChild(menu);
-    
-    // Cerrar menú al hacer clic fuera
-    setTimeout(() => {
-        document.addEventListener('click', function cerrarMenu() {
-            document.body.removeChild(menu);
-            document.removeEventListener('click', cerrarMenu);
         });
-    }, 100);
-}
-
-function exportarPDF() {
-    // Obtener parámetros actuales de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const pdfUrl = `{% url 'rentabilidad_exportar_pdf' %}?${urlParams.toString()}`;
-    window.open(pdfUrl, '_blank');
-}
-
-function exportarExcel() {
-    // Obtener parámetros actuales de la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const excelUrl = `{% url 'rentabilidad_exportar_excel' %}?${urlParams.toString()}`;
-    window.open(excelUrl, '_blank');
-}
-
-function imprimirReporte() {
-    window.print();
-}
-
-// Sistema de filtros mejorado para rentabilidad
-document.addEventListener('DOMContentLoaded', function() {
-    const periodoSelect = document.getElementById('periodo');
-    const fechaInicioInput = document.getElementById('fecha_inicio');
-    const fechaFinInput = document.getElementById('fecha_fin');
-    const filtrarBtn = document.querySelector('button[type="submit"]');
-    const resetBtn = document.querySelector('a[href*="rentabilidad"]');
-    
-    if (!periodoSelect || !fechaInicioInput || !fechaFinInput) {
-        console.warn('Elementos del formulario de rentabilidad no encontrados');
-        return;
-    }
-    
-    // Función para limpiar fechas
-    function limpiarFechas() {
-        fechaInicioInput.value = '';
-        fechaFinInput.value = '';
-    }
-    
-    // Función para aplicar filtros automáticos
-    function aplicarFiltrosAutomaticos() {
-        const periodo = periodoSelect.value;
-        const hoy = new Date();
-        
-        if (periodo === 'todos') {
-            limpiarFechas();
-        } else if (periodo === 'mes') {
-            const hace30Dias = new Date(hoy);
-            hace30Dias.setDate(hoy.getDate() - 30);
-            fechaInicioInput.value = hace30Dias.toISOString().split('T')[0];
-            fechaFinInput.value = hoy.toISOString().split('T')[0];
-        } else if (periodo === 'trimestre') {
-            const hace90Dias = new Date(hoy);
-            hace90Dias.setDate(hoy.getDate() - 90);
-            fechaInicioInput.value = hace90Dias.toISOString().split('T')[0];
-            fechaFinInput.value = hoy.toISOString().split('T')[0];
-        } else if (periodo === 'año') {
-            const hace365Dias = new Date(hoy);
-            hace365Dias.setDate(hoy.getDate() - 365);
-            fechaInicioInput.value = hace365Dias.toISOString().split('T')[0];
-            fechaFinInput.value = hoy.toISOString().split('T')[0];
-        }
-        // Para 'personalizado', no hacer nada, dejar que el usuario ingrese las fechas
-    }
-    
-    // Event listener para cambio de período
-    periodoSelect.addEventListener('change', function() {
-        try {
-            aplicarFiltrosAutomaticos();
         } catch (error) {
-            console.error('Error aplicando filtros automáticos:', error);
+            console.error('Error creando gráfico de distribución:', error);
+            ctxDona.parentElement.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">Error al cargar gráfico</div>';
         }
-    });
+    } else {
+        ctxDona.parentElement.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">Sin datos para mostrar</div>';
+    }
+}
+
+// Gráfico de barras - Gastos por Categoría
+const ctxCategorias = document.getElementById('gastosCategoriasChart');
+if (ctxCategorias) {
+    const categoriasData = {{ gastos_por_categoria_json|safe|default:"[]" }};
     
-    // Event listener para botón filtrar
-    if (filtrarBtn) {
-        filtrarBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            try {
-                // Asegurar que las fechas estén limpias si es 'todos'
-                if (periodoSelect.value === 'todos') {
-                    limpiarFechas();
+    if (categoriasData && categoriasData.length > 0) {
+        new Chart(ctxCategorias, {
+            type: 'bar',
+            data: {
+                labels: categoriasData.map(c => c.categoria__nombre || 'Sin categoría'),
+                datasets: [{
+                    label: 'Gastos por Categoría',
+                    data: categoriasData.map(c => parseFloat(c.total)),
+                    backgroundColor: [
+                        'rgba(220, 38, 38, 0.8)',
+                        'rgba(217, 119, 6, 0.8)',
+                        'rgba(5, 150, 105, 0.8)',
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(124, 58, 237, 0.8)',
+                        'rgba(236, 72, 153, 0.8)'
+                    ],
+                    borderColor: [
+                        '#dc2626',
+                        '#d97706',
+                        '#059669',
+                        '#3b82f6',
+                        '#7c3aed',
+                        '#ec4899'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 13,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        callbacks: {
+                            label: function(context) {
+                                return 'Total: Q' + context.parsed.y.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return 'Q' + value.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                            },
+                            font: {
+                                size: 11
+                            }
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 11
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
                 }
-                document.querySelector('form').submit();
-            } catch (error) {
-                console.error('Error enviando formulario:', error);
-                // Fallback: enviar formulario normalmente
-                document.querySelector('form').submit();
             }
         });
+    } else {
+        ctxCategorias.parentElement.innerHTML = '<div style="text-align: center; padding: 2rem; color: #6b7280;">No hay datos de categorías</div>';
     }
+}
+
+function toggleDateInputs() {
+    const periodo = document.getElementById('periodo').value;
+    const fechaInicioGroup = document.getElementById('fechaInicioGroup');
+    const fechaFinGroup = document.getElementById('fechaFinGroup');
     
-    // Event listener para botón reset
-    if (resetBtn) {
-        resetBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            try {
-                // Limpiar formulario y redirigir
-                limpiarFechas();
-                periodoSelect.value = 'todos';
-                window.location.href = "{% url 'rentabilidad' %}";
-            } catch (error) {
-                console.error('Error en reset:', error);
-                window.location.href = "{% url 'rentabilidad' %}";
-            }
-        });
+    if (periodo === 'todos') {
+        fechaInicioGroup.style.display = 'none';
+        fechaFinGroup.style.display = 'none';
+    } else {
+        fechaInicioGroup.style.display = 'block';
+        fechaFinGroup.style.display = 'block';
     }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    toggleDateInputs();
     
-    console.log('Sistema de filtros de rentabilidad inicializado correctamente');
+    // Animación de entrada
+    const cards = document.querySelectorAll('.metric-card, .project-card');
+    cards.forEach((card, idx) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.4s ease';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, idx * 40);
+    });
 });
 </script>
 {% endblock %}

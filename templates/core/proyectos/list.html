@@ -2,624 +2,863 @@
 {% load custom_filters %}
 {% load static %}
 
-{% block title %}Proyectos - Sistema de Construcción{% endblock %}
+{% block title %}Proyectos - Sistema ARCA{% endblock %}
 
 {% block extra_css %}
 <style>
-    .proyectos-hero {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 3rem 2rem;
-        border-radius: 20px;
+    :root {
+        --primary-color: #1e3a8a;
+        --primary-light: #3b82f6;
+        --success-color: #059669;
+        --warning-color: #d97706;
+        --danger-color: #dc2626;
+        --text-primary: #1f2937;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+    }
+    
+    body {
+        background: #f3f4f6;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    .main-container {
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+    
+    /* Header Section */
+    .page-header {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border-radius: 16px;
+        padding: 2.5rem 2rem;
         margin-bottom: 2rem;
-        text-align: center;
+        box-shadow: 0 10px 25px rgba(16, 185, 129, 0.15);
+        color: white;
         position: relative;
         overflow: hidden;
     }
     
-    .proyectos-hero::before {
+    .page-header::before {
         content: '';
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/><circle cx="10" cy="60" r="0.5" fill="white" opacity="0.1"/><circle cx="90" cy="40" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-        opacity: 0.3;
+        top: -50%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        border-radius: 50%;
     }
     
-    .proyectos-hero-content {
+    .header-content {
         position: relative;
-        z-index: 2;
+        z-index: 1;
     }
     
-    .proyectos-hero-title {
-        font-size: 2.5rem;
+    .page-title {
+        font-size: 2rem;
         font-weight: 700;
-        margin-bottom: 1rem;
-        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
     }
     
-    .proyectos-hero-subtitle {
-        font-size: 1.2rem;
+    .page-subtitle {
+        margin: 0;
         opacity: 0.9;
+        font-size: 1rem;
+    }
+    
+    /* Metrics Dashboard */
+    .metrics-container {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 1.5rem;
         margin-bottom: 2rem;
     }
     
-    .proyectos-stats {
+    .metric-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border-color);
+        transition: all 0.3s;
+        border-left: 4px solid var(--accent-color);
+        min-height: 140px;
         display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+    
+    .metric-card:hover {
+        box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+        transform: translateY(-2px);
+    }
+    
+    .metric-card.total { --accent-color: var(--primary-color); }
+    .metric-card.progress { --accent-color: var(--warning-color); }
+    .metric-card.completed { --accent-color: var(--success-color); }
+    .metric-card.pending { --accent-color: #6b7280; }
+    
+    .metric-header {
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
         justify-content: center;
-        gap: 2rem;
+        font-size: 1.25rem;
+        background: var(--accent-color);
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .metric-content {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .metric-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 0.5rem;
+        line-height: 1;
+    }
+    
+    .metric-label {
+        font-size: 0.875rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Control Panel */
+    .control-panel {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border-color);
+    }
+    
+    .control-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid var(--border-color);
+    }
+    
+    .control-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .filters-row {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto;
+        gap: 1rem;
+        align-items: end;
+        margin-bottom: 1rem;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.025em;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-input,
+    .filter-select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--border-color);
+        border-radius: 8px;
+        font-size: 0.9375rem;
+        transition: all 0.2s;
+    }
+    
+    .filter-input:focus,
+    .filter-select:focus {
+        outline: none;
+        border-color: var(--primary-light);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.75rem;
         flex-wrap: wrap;
     }
     
-    .proyectos-stat {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
-        padding: 1rem 1.5rem;
-        border-radius: 15px;
-        border: 1px solid rgba(255,255,255,0.2);
-        transition: all 0.3s ease;
-    }
-    
-    .proyectos-stat:hover {
-        transform: translateY(-5px);
-        background: rgba(255,255,255,0.2);
-    }
-    
-    .proyectos-stat-number {
-        font-size: 2rem;
-        font-weight: 700;
-        display: block;
-    }
-    
-    .proyectos-stat-label {
-        font-size: 0.9rem;
-        opacity: 0.8;
-    }
-    
-    .proyectos-actions {
-        background: white;
-        border-radius: 15px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .proyectos-table-container {
-        background: white;
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-        border: 1px solid rgba(255,255,255,0.2);
-    }
-    
-    .proyectos-table-header {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        padding: 1.5rem;
-        border-bottom: 1px solid #dee2e6;
-    }
-    
-    .btn-neostructure {
-        background: linear-gradient(135deg, #667eea, #764ba2);
-        color: white;
+    .btn {
+        padding: 0.625rem 1.25rem;
+        border-radius: 8px;
         border: none;
+        font-weight: 600;
+        font-size: 0.875rem;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.2s;
+        white-space: nowrap;
+    }
+    
+    .btn-primary {
+        background: var(--success-color);
+        color: white;
+    }
+    
+    .btn-primary:hover {
+        background: #047857;
+        transform: translateY(-1px);
+        color: white;
+    }
+    
+    .btn-filter {
+        background: var(--primary-color);
+        color: white;
+        padding: 0.75rem 1.5rem;
+    }
+    
+    /* Table Section */
+    .table-section {
+        background: white;
         border-radius: 12px;
-        padding: 12px 24px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        overflow: hidden;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     }
     
-    .btn-neostructure:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-        color: white;
+    .table-wrapper {
+        overflow-x: auto;
     }
     
-    .table th {
-        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
-        border: none;
-        padding: 18px 20px;
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    
+    .data-table thead {
+        background: linear-gradient(to bottom, #f9fafb, #f3f4f6);
+    }
+    
+    .data-table th {
+        padding: 1rem 1.25rem;
+        text-align: left;
         font-weight: 600;
-        color: #2c3e50;
-        font-size: 14px;
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.05em;
+        border-bottom: 2px solid var(--border-color);
     }
     
-    .table tbody tr {
-        transition: all 0.3s ease;
+    .data-table tbody tr {
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.15s;
     }
     
-    .table tbody tr:hover {
-        background: linear-gradient(135deg, rgba(78, 205, 196, 0.05), rgba(255, 107, 107, 0.05));
-        transform: scale(1.01);
+    .data-table tbody tr:hover {
+        background: #f9fafb;
     }
     
-    .table tbody td {
-        padding: 18px 20px;
-        border-bottom: 1px solid #f1f3f4;
+    .data-table td {
+        padding: 1.25rem;
+        font-size: 0.9375rem;
+        color: var(--text-primary);
         vertical-align: middle;
     }
     
-    .badge {
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 12px;
+    .project-cell {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .project-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 1rem;
+        flex-shrink: 0;
+    }
+    
+    .project-info {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .project-name {
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        color: var(--text-primary);
     }
     
-    .badge-success {
-        background: linear-gradient(135deg, #43e97b, #38f9d7);
+    .project-client {
+        font-size: 0.8125rem;
+        color: var(--text-secondary);
+    }
+    
+    .badge {
+        padding: 0.375rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        display: inline-block;
+    }
+    
+    .badge-pendiente {
+        background: #fef3c7;
+        color: #92400e;
+    }
+    
+    .badge-en_progreso {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+    
+    .badge-completado {
+        background: #d1fae5;
+        color: #065f46;
+    }
+    
+    .badge-cancelado {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+    
+    .btn-table {
+        padding: 0.375rem 0.75rem;
+        border-radius: 6px;
+        border: none;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+    
+    .btn-table i {
+        font-size: 0.85rem;
+    }
+    
+    .btn-view {
+        background: var(--primary-color);
         color: white;
     }
     
-    .badge-warning {
-        background: linear-gradient(135deg, #fa709a, #fee140);
+    .btn-view:hover {
+        background: #1e40af;
         color: white;
     }
     
-    .badge-info {
-        background: linear-gradient(135deg, #4facfe, #00f2fe);
+    .btn-edit {
+        background: var(--warning-color);
         color: white;
     }
     
-    .badge-primary {
-        background: linear-gradient(135deg, #667eea, #764ba2);
+    .btn-edit:hover {
+        background: #b45309;
         color: white;
     }
     
-    /* Estilos para notificaciones modernas */
-    .modern-notification {
+    .btn-planilla {
+        background: linear-gradient(135deg, #0ea5e9, #0284c7);
+        color: white;
+    }
+    
+    .btn-planilla:hover {
+        background: linear-gradient(135deg, #0284c7, #0369a1);
+        color: white;
+    }
+    
+    .btn-anticipos {
+        background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        color: white;
+    }
+    
+    .btn-anticipos:hover {
+        background: linear-gradient(135deg, #7c3aed, #5b21b6);
+        color: white;
+    }
+    
+    .btn-calendario {
+        background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        color: white;
+    }
+    
+    .btn-calendario:hover {
+        background: linear-gradient(135deg, #1d4ed8, #1e40af);
+        color: white;
+    }
+    
+    .btn-archivos {
+        background: #f3f4f6;
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    
+    .btn-archivos:hover {
+        background: #e5e7eb;
+        color: var(--text-primary);
+    }
+    
+    .btn-delete {
+        background: var(--danger-color);
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background: #b91c1c;
+        color: white;
+    }
+    
+    .actions-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+    
+    .actions-wrapper form {
+        display: inline-flex;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 5rem 2rem;
         background: white;
         border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        margin-bottom: 16px;
-        overflow: hidden;
-        position: relative;
-        transform: translateX(100%);
-        opacity: 0;
-        animation: slideInRight 0.5s ease forwards;
-        border-left: 4px solid;
+        border: 1px solid var(--border-color);
     }
     
-    .modern-notification.alert-success {
-        border-left-color: #28a745;
-    }
-    
-    .modern-notification.alert-error {
-        border-left-color: #dc3545;
-    }
-    
-    .modern-notification.alert-warning {
-        border-left-color: #ffc107;
-    }
-    
-    .modern-notification.alert-info {
-        border-left-color: #17a2b8;
-    }
-    
-    .notification-content {
+    .empty-icon {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 1.5rem;
+        background: linear-gradient(135deg, #f3f4f6, #e5e7eb);
+        border-radius: 50%;
         display: flex;
-        align-items: flex-start;
-        padding: 16px;
-        position: relative;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: var(--text-secondary);
     }
     
-    .notification-icon {
-        margin-right: 12px;
-        font-size: 20px;
-        margin-top: 2px;
+    .pagination {
+        justify-content: center;
+        margin-top: 2rem;
+        display: flex;
     }
     
-    .modern-notification.alert-success .notification-icon {
-        color: #28a745;
+    .pagination .page-link {
+        border-color: var(--border-color);
+        color: var(--text-primary);
+        padding: 0.5rem 1rem;
+        margin: 0 0.25rem;
+        border-radius: 6px;
+        text-decoration: none;
     }
     
-    .modern-notification.alert-error .notification-icon {
-        color: #dc3545;
+    .pagination .page-item.active .page-link {
+        background: var(--success-color);
+        border-color: var(--success-color);
+        color: white;
     }
     
-    .modern-notification.alert-warning .notification-icon {
-        color: #ffc107;
-    }
-    
-    .modern-notification.alert-info .notification-icon {
-        color: #17a2b8;
-    }
-    
-    .notification-text {
-        flex: 1;
-        font-size: 14px;
-        line-height: 1.4;
-    }
-    
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
+    @media (max-width: 1200px) {
+        .metrics-container {
+            grid-template-columns: repeat(2, 1fr);
         }
     }
     
-    /* Estilos para modals de confirmación */
-    .modal-header.bg-danger {
-        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%) !important;
+    @media (max-width: 1024px) {
+        .filters-row {
+            grid-template-columns: 1fr;
+        }
     }
     
-    .modal-content {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    @media (max-width: 768px) {
+        .main-container {
+            padding: 1rem;
+        }
+        
+        .page-header {
+            padding: 1.5rem;
+        }
+        
+        .metrics-container {
+            grid-template-columns: repeat(2, 1fr);
+        }
+        
+        .data-table {
+            font-size: 0.875rem;
+        }
+        
+        .actions-wrapper {
+            flex-direction: column;
+        }
+        
+        .actions-wrapper a,
+        .actions-wrapper button {
+            width: 100%;
+            justify-content: center;
+        }
     }
     
-    .modal-header {
-        border-radius: 15px 15px 0 0;
-        border-bottom: none;
-    }
-    
-    .modal-footer {
-        border-radius: 0 0 15px 15px;
-        border-top: 1px solid #e9ecef;
-    }
-    
-    .btn-danger {
-        background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-        border: none;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-danger:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(231, 76, 60, 0.4);
-    }
-    
-    .btn-secondary {
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-secondary:hover {
-        transform: translateY(-2px);
+    @media (max-width: 480px) {
+        .metrics-container {
+            grid-template-columns: 1fr;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <!-- Hero Banner -->
-    <div class="proyectos-hero">
-        <div class="proyectos-hero-content">
-            <h1 class="proyectos-hero-title">📋 Gestión de Proyectos</h1>
-            <p class="proyectos-hero-subtitle">Administra y da seguimiento a todos tus proyectos de construcción</p>
-            
-            <!-- Estadísticas -->
-            <div class="proyectos-stats">
-                <div class="proyectos-stat">
-                    <span class="proyectos-stat-number">{{ total_proyectos|default:"0" }}</span>
-                    <span class="proyectos-stat-label">Total Proyectos</span>
-                </div>
-                <div class="proyectos-stat">
-                    <span class="proyectos-stat-number">{{ proyectos_en_progreso|default:"0" }}</span>
-                    <span class="proyectos-stat-label">En Progreso</span>
-                </div>
-                <div class="proyectos-stat">
-                    <span class="proyectos-stat-number">{{ proyectos_pendientes|default:"0" }}</span>
-                    <span class="proyectos-stat-label">Pendientes</span>
-                </div>
-                <div class="proyectos-stat">
-                    <span class="proyectos-stat-number">{{ proyectos_completados|default:"0" }}</span>
-                    <span class="proyectos-stat-label">Completados</span>
-                </div>
+<div class="main-container">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="header-content">
+            <div class="page-title">
+                <i class="fas fa-building"></i>
+                <h1 style="margin: 0;">Gestión de Proyectos</h1>
             </div>
+            <p class="page-subtitle">Administra todos los proyectos de construcción</p>
         </div>
     </div>
 
-    <!-- Acciones Rápidas -->
-    <div class="proyectos-actions">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <h5><i class="fas fa-tasks"></i> Acciones Rápidas</h5>
-                <p class="text-muted mb-0">Gestiona tus proyectos de construcción</p>
-            </div>
-            <div>
-                <a href="{% url 'proyecto_create' %}" class="btn btn-neostructure">
-                    <i class="fas fa-plus"></i> Nuevo Proyecto
-                </a>
-                <a href="{% url 'dashboard' %}" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left"></i> Volver al Dashboard
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Lista de Proyectos -->
-    <div class="proyectos-table-container">
-        <div class="proyectos-table-header">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h5><i class="fas fa-list"></i> Lista de Proyectos</h5>
-                    <p class="text-muted mb-0">
-                        {% if proyectos %}
-                            Mostrando {{ proyectos|length }} de {{ proyectos|length }} proyectos
-                        {% else %}
-                            No hay proyectos disponibles
-                        {% endif %}
-                    </p>
+    <!-- Metrics Dashboard -->
+    <div class="metrics-container">
+        <div class="metric-card total">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-briefcase"></i>
                 </div>
-                <div class="d-flex gap-2">
-                    <select id="filtroEstado" class="form-select form-select-sm" style="width: auto;">
-                        <option value="todos">Todos los Estados</option>
-                        <option value="pendiente">Solo Pendientes</option>
-                        <option value="en_progreso">Solo En Progreso</option>
-                        <option value="completado">Solo Completados</option>
-                        <option value="cancelado">Solo Cancelados</option>
-                    </select>
-                </div>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ total_proyectos }}</div>
+                <div class="metric-label">Total Proyectos</div>
             </div>
         </div>
         
-        <div class="table-responsive">
+        <div class="metric-card progress">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-tasks"></i>
+                </div>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ proyectos_en_progreso }}</div>
+                <div class="metric-label">En Progreso</div>
+            </div>
+        </div>
+        
+        <div class="metric-card completed">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ proyectos_completados }}</div>
+                <div class="metric-label">Completados</div>
+            </div>
+        </div>
+        
+        <div class="metric-card pending">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+            <div class="metric-content">
+                <div class="metric-value">{{ proyectos_pendientes }}</div>
+                <div class="metric-label">Pendientes</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="control-header">
+            <div class="control-title">
+                <i class="fas fa-filter"></i>
+                <span>Filtros y Búsqueda</span>
+            </div>
+        </div>
+        
+        <form method="GET">
+            <div class="filters-row">
+                <div class="filter-group">
+                    <label><i class="fas fa-building me-1"></i> Cliente</label>
+                    <select name="cliente" class="filter-select">
+                        <option value="">Todos los clientes</option>
+                        {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}" {% if filtros_activos.cliente == cliente.id|stringformat:"s" %}selected{% endif %}>
+                                {{ cliente.razon_social }}
+                            </option>
+                        {% endfor %}
+                    </select>
+    </div>
+
+                <div class="filter-group">
+                    <label><i class="fas fa-signal me-1"></i> Estado</label>
+                    <select name="estado" class="filter-select">
+                        <option value="">Todos los estados</option>
+                        {% for estado_key, estado_label in estados %}
+                            <option value="{{ estado_key }}" {% if filtros_activos.estado == estado_key %}selected{% endif %}>
+                                {{ estado_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label><i class="fas fa-list-ol me-1"></i> Por página</label>
+                    <select name="per_page" class="filter-select">
+                        <option value="25" {% if request.GET.per_page == '25' %}selected{% endif %}>25</option>
+                        <option value="50" {% if request.GET.per_page == '50' %}selected{% endif %}>50</option>
+                        <option value="100" {% if request.GET.per_page == '100' %}selected{% endif %}>100</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <button type="submit" class="btn btn-filter">
+                        <i class="fas fa-search"></i> Filtrar
+                    </button>
+                </div>
+            </div>
+        </form>
+        
+        <div class="action-buttons">
+            <a href="{% url 'proyecto_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus-circle"></i> Nuevo Proyecto
+            </a>
+            </div>
+        </div>
+        
+    <!-- Projects Table -->
             {% if proyectos %}
-                <table class="table table-hover mb-0">
+        <div class="table-section">
+            <div class="table-wrapper">
+                <table class="data-table">
                     <thead>
                         <tr>
-                            <th>Nombre</th>
+                            <th>Proyecto</th>
                             <th>Cliente</th>
-                            <th>Estado</th>
                             <th>Presupuesto</th>
-                            <th>Acciones</th>
+                            <th>Estado</th>
+                            <th>Fecha Inicio</th>
+                            <th>Fecha Fin</th>
+                            <th style="text-align: center;">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for proyecto in proyectos %}
                         <tr>
                             <td>
-                                <strong>{{ proyecto.nombre }}</strong>
-                                <br>
-                                <small class="text-muted">{{ proyecto.descripcion|truncatechars:50|default:"Sin descripción" }}</small>
+                                <div class="project-cell">
+                                    <div class="project-icon">
+                                        {{ proyecto.nombre|first|upper }}
+                                    </div>
+                                    <div class="project-info">
+                                        <span class="project-name">{{ proyecto.nombre }}</span>
+                                        <span class="project-client">ID: #{{ proyecto.id }}</span>
+                                    </div>
+                                </div>
                             </td>
                             <td>
-                                <span class="badge badge-info">{{ proyecto.cliente.razon_social|default:"N/A" }}</span>
+                                <span>{{ proyecto.cliente.razon_social }}</span>
                             </td>
                             <td>
-                                {% if proyecto.estado == 'en_progreso' %}
-                                    <span class="badge badge-success">En Progreso</span>
-                                {% elif proyecto.estado == 'pendiente' %}
-                                    <span class="badge badge-warning">Pendiente</span>
-                                {% elif proyecto.estado == 'completado' %}
-                                    <span class="badge badge-primary">Completado</span>
+                                {% if proyecto.presupuesto %}
+                                    <span style="font-weight: 600; color: var(--success-color);">
+                                        {{ proyecto.presupuesto|currency_gtq }}
+                                    </span>
                                 {% else %}
-                                    <span class="badge badge-secondary">{{ proyecto.estado|title }}</span>
+                                    <span style="color: var(--text-secondary);">-</span>
                                 {% endif %}
                             </td>
                             <td>
-                                <strong>{{proyecto.presupuesto|currency_gtq}}</strong>
+                                <span class="badge badge-{{ proyecto.estado }}">
+                                    {% if proyecto.estado == 'pendiente' %}
+                                        <i class="fas fa-clock"></i> Pendiente
+                                    {% elif proyecto.estado == 'en_progreso' %}
+                                        <i class="fas fa-tasks"></i> En Progreso
+                                    {% elif proyecto.estado == 'completado' %}
+                                        <i class="fas fa-check-circle"></i> Completado
+                                    {% else %}
+                                        <i class="fas fa-times-circle"></i> Cancelado
+                                    {% endif %}
+                                </span>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <a href="{% url 'proyecto_dashboard' proyecto.id %}" class="btn btn-sm btn-outline-primary" title="Ver Dashboard">
-                                        <i class="fas fa-tachometer-alt"></i>
+                                <span style="color: var(--text-secondary); font-size: 0.875rem;">
+                                    {% if proyecto.fecha_inicio %}
+                                        {{ proyecto.fecha_inicio|date:"d/m/Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span style="color: var(--text-secondary); font-size: 0.875rem;">
+                                    {% if proyecto.fecha_fin %}
+                                        {{ proyecto.fecha_fin|date:"d/m/Y" }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="actions-wrapper">
+                                    <a href="{% url 'proyecto_dashboard' proyecto.id %}" 
+                                       class="btn-table btn-view" title="Ver detalles">
+                                        <i class="fas fa-eye"></i> Ver
                                     </a>
-                                    <a href="{% url 'proyecto_edit' proyecto.id %}" class="btn btn-sm btn-outline-warning" title="Editar">
-                                        <i class="fas fa-edit"></i>
+                                    <a href="{% url 'planilla_proyecto' proyecto.id %}"
+                                       class="btn-table btn-planilla" title="Planilla del proyecto">
+                                        <i class="fas fa-file-invoice-dollar"></i> Planilla
                                     </a>
-                                    <a href="{% url 'asignar_colaboradores_proyecto' proyecto.id %}" class="btn btn-sm btn-outline-info" title="Asignar Colaboradores">
-                                        <i class="fas fa-users"></i>
+                                    <a href="{% url 'administrar_anticipos_proyecto' proyecto.id %}"
+                                       class="btn-table btn-anticipos" title="Administrar anticipos">
+                                        <i class="fas fa-hand-holding-usd"></i> Anticipos
                                     </a>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" title="Eliminar" onclick="confirmarEliminarProyecto({{ proyecto.id }}, '{{ proyecto.nombre|escapejs }}', '{{ proyecto.cliente.razon_social|escapejs }}', '{{ proyecto.presupuesto|currency_gtq|escapejs }}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
+                                    <a href="{% url 'calendario_pagos_proyecto' proyecto.id %}"
+                                       class="btn-table btn-calendario" title="Calendario de pagos">
+                                        <i class="fas fa-calendar-alt"></i> Calendario
+                                    </a>
+                                    <a href="{% url 'archivos_proyecto_list' proyecto.id %}"
+                                       class="btn-table btn-archivos" title="Archivos del proyecto">
+                                        <i class="fas fa-folder-open"></i> Archivos
+                                    </a>
+                                    <a href="{% url 'proyecto_edit' proyecto.id %}" 
+                                       class="btn-table btn-edit" title="Editar">
+                                        <i class="fas fa-edit"></i> Editar
+                                    </a>
+                                    <form method="post" action="{% url 'proyecto_delete' proyecto.id %}" onsubmit="return confirm('¿Eliminar el proyecto {{ proyecto.nombre }}? Se desactivará del sistema.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn-table btn-delete" title="Eliminar">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
+                                    </form>
                                 </div>
                             </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-            {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No hay proyectos disponibles</h5>
-                    <p class="text-muted">Comienza creando tu primer proyecto de construcción</p>
-                    <a href="{% url 'proyecto_create' %}" class="btn btn-neostructure">
-                        <i class="fas fa-plus"></i> Crear Primer Proyecto
-                    </a>
-                </div>
-            {% endif %}
+            </div>
         </div>
-    </div>
+
+        <!-- Pagination -->
+        {% if page_obj.has_other_pages %}
+            <nav aria-label="Paginación">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if filtros_activos.estado %}&estado={{ filtros_activos.estado }}{% endif %}{% if filtros_activos.cliente %}&cliente={{ filtros_activos.cliente }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filtros_activos.estado %}&estado={{ filtros_activos.estado }}{% endif %}{% if filtros_activos.cliente %}&cliente={{ filtros_activos.cliente }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if filtros_activos.estado %}&estado={{ filtros_activos.estado }}{% endif %}{% if filtros_activos.cliente %}&cliente={{ filtros_activos.cliente }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filtros_activos.estado %}&estado={{ filtros_activos.estado }}{% endif %}{% if filtros_activos.cliente %}&cliente={{ filtros_activos.cliente }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filtros_activos.estado %}&estado={{ filtros_activos.estado }}{% endif %}{% if filtros_activos.cliente %}&cliente={{ filtros_activos.cliente }}{% endif %}{% if request.GET.per_page %}&per_page={{ request.GET.per_page }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        {% endif %}
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <h4>No hay proyectos registrados</h4>
+            <p>Comienza creando tu primer proyecto de construcción</p>
+            <a href="{% url 'proyecto_create' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus-circle me-2"></i>Crear Primer Proyecto
+            </a>
+        </div>
+    {% endif %}
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Filtros de proyectos
-    const filtroEstado = document.getElementById('filtroEstado');
-    const filasProyectos = document.querySelectorAll('tbody tr');
-    
-    function aplicarFiltros() {
-        const estadoSeleccionado = filtroEstado ? filtroEstado.value : 'todos';
-        let proyectosVisibles = 0;
-        
-        filasProyectos.forEach(fila => {
-            const estadoProyecto = fila.querySelector('td:nth-child(3) .badge').textContent.trim();
-            let mostrar = true;
-            
-            // Filtro por estado
-            if (estadoSeleccionado === 'pendiente') {
-                mostrar = estadoProyecto.includes('Pendiente');
-            } else if (estadoSeleccionado === 'en_progreso') {
-                mostrar = estadoProyecto.includes('En Progreso');
-            } else if (estadoSeleccionado === 'completado') {
-                mostrar = estadoProyecto.includes('Completado');
-            } else if (estadoSeleccionado === 'cancelado') {
-                mostrar = estadoProyecto.includes('Cancelado');
-            }
-            // Si es 'todos', mostrar = true (por defecto)
-            
-            fila.style.display = mostrar ? '' : 'none';
-            if (mostrar) proyectosVisibles++;
-        });
-        
-        // Actualizar contador
-        const contadorElement = document.querySelector('.text-muted');
-        if (contadorElement) {
-            contadorElement.textContent = `Mostrando ${proyectosVisibles} de ${filasProyectos.length} proyectos`;
-        }
-    }
-    
-    // Event listeners para los filtros
-    if (filtroEstado) {
-        filtroEstado.addEventListener('change', aplicarFiltros);
-    }
-});
-
-// Función para confirmar eliminación de proyecto
-function confirmarEliminarProyecto(proyectoId, nombreProyecto, clienteProyecto, presupuestoProyecto) {
-    // Actualizar el contenido del modal con la información del proyecto
-    document.getElementById('nombreProyectoEliminar').textContent = nombreProyecto;
-    document.getElementById('clienteProyectoEliminar').textContent = clienteProyecto;
-    document.getElementById('presupuestoProyectoEliminar').textContent = presupuestoProyecto;
-    document.getElementById('btnConfirmarEliminacionProyecto').href = `/proyectos/${proyectoId}/eliminar/`;
-    
-    // Mostrar el modal
-    const modal = new bootstrap.Modal(document.getElementById('confirmarEliminacionProyectoModal'));
-    modal.show();
-}
-
-// Función para mostrar notificaciones
-function showSuccessNotification(message) {
-    // Crear notificación toast moderna
-    const notification = document.createElement('div');
-    notification.className = 'modern-notification alert-success';
-    notification.innerHTML = `
-        <div class="notification-content">
-            <div class="notification-icon">
-                <i class="fas fa-check-circle"></i>
-            </div>
-            <div class="notification-text">
-                <strong>Éxito</strong><br>
-                ${message}
-            </div>
-        </div>
-    `;
-    
-    // Agregar al contenedor de notificaciones
-    let container = document.getElementById('notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notification-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            max-width: 400px;
-            width: 100%;
-        `;
-        document.body.appendChild(container);
-    }
-    
-    container.appendChild(notification);
-    
-    // Remover después de 3 segundos
-    setTimeout(() => {
-        if (notification.parentNode) {
-            notification.parentNode.removeChild(notification);
-        }
-    }, 3000);
-}
-</script>
-
-<!-- Modal de Confirmación de Eliminación de Proyecto -->
-<div class="modal fade" id="confirmarEliminacionProyectoModal" tabindex="-1" aria-labelledby="confirmarEliminacionProyectoModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="confirmarEliminacionProyectoModalLabel">
-                    <i class="fas fa-trash me-2"></i>Confirmar Eliminación
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="text-center">
-                    <div class="mb-3">
-                        <i class="fas fa-exclamation-triangle fa-3x text-danger"></i>
-                    </div>
-                    <h6 class="mb-3">¿Estás seguro de que quieres eliminar este proyecto?</h6>
-                    <div class="alert alert-warning">
-                        <strong>⚠️ Advertencia:</strong> Esta acción desactivará el proyecto y no podrá ser utilizado en nuevas operaciones.
-                        <br><br>
-                        <div class="row">
-                            <div class="col-6">
-                                <strong>Proyecto:</strong><br>
-                                <span id="nombreProyectoEliminar" class="fw-bold"></span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Cliente:</strong><br>
-                                <span id="clienteProyectoEliminar"></span>
-                            </div>
-                        </div>
-                        <div class="row mt-2">
-                            <div class="col-12">
-                                <strong>Presupuesto:</strong><br>
-                                <span id="presupuestoProyectoEliminar" class="text-danger fw-bold"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Botón de ayuda contextual -->
-                    <div class="mt-2">
-                        <button type="button" class="btn btn-outline-info btn-sm" onclick="mostrarAyudaProyectos()">
-                            <i class="fas fa-question-circle me-1"></i>Ayuda sobre Proyectos
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>Cancelar
-                </button>
-                <a href="#" id="btnConfirmarEliminacionProyecto" class="btn btn-danger">
-                    <i class="fas fa-trash me-2"></i>Eliminar Proyecto
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-// Función para mostrar ayuda sobre proyectos usando notificaciones toast
-function mostrarAyudaProyectos() {
-    // Mostrar información sobre eliminación de proyectos
-    if (typeof toastNotification !== 'undefined') {
-        toastNotification.info(
-            'Información sobre Proyectos',
-            'El proyecto será marcado como inactivo, no se eliminará físicamente. Las facturas y gastos existentes no se verán afectados.',
-            6000
-        );
-        
-        // Mostrar información adicional después de un breve delay
+    // Animación de entrada
+    const rows = document.querySelectorAll('.data-table tbody tr, .metric-card');
+    rows.forEach((row, idx) => {
+        row.style.opacity = '0';
+        row.style.transform = 'translateY(20px)';
         setTimeout(() => {
-            toastNotification.warning(
-                'Restricciones de Proyectos Inactivos',
-                'No se podrán crear nuevas facturas para proyectos inactivos. Esta acción se puede revertir editando el proyecto.',
-                6000
-            );
-        }, 1000);
-    } else {
-        // Fallback si toastNotification no está disponible
-        alert('Información sobre Proyectos:\n\n• El proyecto será marcado como inactivo, no se eliminará físicamente\n• Las facturas y gastos existentes no se verán afectados\n• No se podrán crear nuevas facturas para este proyecto\n• Esta acción se puede revertir editando el proyecto');
-    }
-}
+            row.style.transition = 'all 0.4s ease';
+            row.style.opacity = '1';
+            row.style.transform = 'translateY(0)';
+        }, idx * 40);
+    });
+});
 </script>
-
 {% endblock %}

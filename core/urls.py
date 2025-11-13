@@ -39,10 +39,18 @@ urlpatterns = [
     path('anticipos/<int:anticipo_id>/liquidar/', views.liquidar_anticipo, name='liquidar_anticipo'),
     path('proyectos/<int:proyecto_id>/calendario-pagos/', views.calendario_pagos_proyecto, name='calendario_pagos_proyecto'),
     
-    # Trabajadores Diarios
+    # Trabajadores Diarios - Módulo Principal
+    path('trabajadores-diarios/', views.trabajadores_diarios_dashboard, name='trabajadores_diarios_dashboard'),
+    path('trabajadores-diarios/gestor-planillas/', views.planillas_trabajadores_diarios_gestor, name='planillas_trabajadores_diarios_gestor'),
+    path('trabajadores-diarios/crear-planilla/', views.planilla_trabajadores_diarios_create_global, name='planilla_trabajadores_diarios_create_global'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/', views.trabajadores_diarios_list, name='trabajadores_diarios_list'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/crear/', views.trabajador_diario_create, name='trabajador_diario_create'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/finalizar/', views.finalizar_planilla_trabajadores, name='finalizar_planilla_trabajadores'),
+    path(
+        'proyectos/<int:proyecto_id>/trabajadores-diarios/planilla/<int:planilla_id>/reabrir/',
+        views.reabrir_planilla_trabajadores,
+        name='reabrir_planilla_trabajadores'
+    ),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/reactivar-todos/', views.reactivar_todos_trabajadores_diarios, name='reactivar_todos_trabajadores_diarios'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/<int:trabajador_id>/', views.trabajador_diario_detail, name='trabajador_diario_detail'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/<int:trabajador_id>/editar/', views.trabajador_diario_edit, name='trabajador_diario_edit'),
@@ -146,6 +154,7 @@ urlpatterns = [
     
     # Offline
     path('offline/', views.offline_view, name='offline'),
+    path('service-worker.js', views.service_worker, name='service_worker'),
     
     # Anticipos
     path('anticipos/', views.anticipos_list, name='anticipos_list'),

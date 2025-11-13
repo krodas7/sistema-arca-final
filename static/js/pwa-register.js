@@ -1,7 +1,7 @@
 // Script de registro de PWA para Sistema ARCA Construcción
 class PWARegister {
     constructor() {
-        this.serviceWorkerPath = '/static/js/service-worker.js';
+        this.serviceWorkerPath = '/service-worker.js';
         this.isRegistered = false;
         this.registration = null;
     }
@@ -16,9 +16,7 @@ class PWARegister {
         try {
             console.log('🔧 Registrando Service Worker...');
             
-            this.registration = await navigator.serviceWorker.register(this.serviceWorkerPath, {
-                scope: '/'
-            });
+            this.registration = await navigator.serviceWorker.register(this.serviceWorkerPath);
 
             console.log('✅ Service Worker registrado:', this.registration.scope);
 

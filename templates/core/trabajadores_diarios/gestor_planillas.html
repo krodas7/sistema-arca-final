@@ -1,0 +1,508 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Gestor de Planillas - Trabajadores Diarios{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f5f7fa;
+    }
+    
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 20px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+    
+    .page-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .page-header p {
+        margin: 0;
+        opacity: 0.95;
+        font-size: 1rem;
+    }
+    
+    .stats-bar {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-box {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+        border-left: 4px solid var(--color);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-box:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+    }
+    
+    .stat-box.total { --color: #3498db; }
+    .stat-box.active { --color: #2ecc71; }
+    .stat-box.finalized { --color: #95a5a6; }
+    .stat-box.workers { --color: #9b59b6; }
+    
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--color);
+        line-height: 1;
+    }
+    
+    .stat-label {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-top: 0.5rem;
+    }
+    
+    .toolbar {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .filters {
+        display: flex;
+        gap: 1rem;
+        flex: 1;
+        flex-wrap: wrap;
+    }
+    
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+    
+    .filter-group label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filter-group select {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+    }
+    
+    .filter-group select:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .btn-create {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.85rem 2rem;
+        border-radius: 12px;
+        border: none;
+        font-weight: 700;
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .planillas-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 1.5rem;
+    }
+    
+    .planilla-card {
+        background: white;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid transparent;
+    }
+    
+    .planilla-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 35px rgba(0,0,0,0.12);
+        border-color: #667eea;
+    }
+    
+    .planilla-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 1.5rem;
+        color: white;
+    }
+    
+    .planilla-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .planilla-project {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .planilla-body {
+        padding: 1.5rem;
+    }
+    
+    .planilla-meta {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .meta-item {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+    
+    .meta-value {
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: #667eea;
+    }
+    
+    .meta-label {
+        font-size: 0.75rem;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-top: 0.3rem;
+    }
+    
+    .planilla-status {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 1rem;
+    }
+    
+    .status-activa {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+        color: white;
+    }
+    
+    .status-finalizada {
+        background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+        color: white;
+    }
+    
+    .status-pendiente {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+        color: white;
+    }
+    
+    .planilla-actions {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+        gap: 0.5rem;
+    }
+    
+    .btn-action {
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+    
+    .btn-view {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+    }
+    
+    .btn-view:hover {
+        background: linear-gradient(135deg, #2980b9, #21618c);
+        transform: scale(1.02);
+        color: white;
+    }
+    
+    .btn-manage {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+    }
+    
+    .btn-manage:hover {
+        background: linear-gradient(135deg, #764ba2, #5a32a3);
+        transform: scale(1.02);
+        color: white;
+    }
+    
+    .btn-delete {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        color: white;
+    }
+    
+    .btn-delete:hover {
+        background: linear-gradient(135deg, #c0392b, #a93226);
+        transform: scale(1.02);
+        color: white;
+    }
+    
+    .empty-state {
+        background: white;
+        padding: 5rem 2rem;
+        border-radius: 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    
+    .empty-icon {
+        font-size: 5rem;
+        color: #dee2e6;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state h4 {
+        color: #2c3e50;
+        font-weight: 700;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state p {
+        color: #7f8c8d;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+        .planillas-grid {
+            grid-template-columns: 1fr;
+        }
+        .toolbar {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        .filters {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div style="background: rgba(255,255,255,0.1); padding: 0.5rem 1rem; border-radius: 8px; display: inline-flex; gap: 0.5rem; font-size: 0.9rem; margin-bottom: 1rem;">
+            <a href="{% url 'trabajadores_diarios_dashboard' %}" style="color: rgba(255,255,255,0.8); text-decoration: none;">
+                <i class="fas fa-home"></i> Inicio
+            </a>
+            <span style="color: rgba(255,255,255,0.6);">›</span>
+            <span style="color: white;">Gestor de Planillas</span>
+        </div>
+        <h1>
+            <i class="fas fa-clipboard-list"></i>
+            <span>Gestor de Planillas</span>
+        </h1>
+        <p>Administra todas las planillas de trabajadores diarios desde un solo lugar</p>
+    </div>
+
+    <!-- Statistics Bar -->
+    <div class="stats-bar">
+        <div class="stat-box total">
+            <div class="stat-value">{{ total_planillas }}</div>
+            <div class="stat-label">Total Planillas</div>
+        </div>
+        <div class="stat-box active">
+            <div class="stat-value">{{ planillas_activas }}</div>
+            <div class="stat-label">Planillas Activas</div>
+        </div>
+        <div class="stat-box finalized">
+            <div class="stat-value">{{ planillas_finalizadas }}</div>
+            <div class="stat-label">Finalizadas</div>
+        </div>
+        <div class="stat-box workers">
+            <div class="stat-value">{{ total_trabajadores }}</div>
+            <div class="stat-label">Total Trabajadores</div>
+        </div>
+    </div>
+
+    <!-- Toolbar with Filters and Create Button -->
+    <div class="toolbar">
+        <form method="GET" class="filters">
+            <div class="filter-group">
+                <label for="proyecto">Filtrar por Proyecto</label>
+                <select name="proyecto" id="proyecto" onchange="this.form.submit()">
+                    <option value="">Todos los proyectos</option>
+                    {% for proyecto in proyectos %}
+                        <option value="{{ proyecto.id }}" {% if proyecto_filtro == proyecto.id|stringformat:"s" %}selected{% endif %}>
+                            {{ proyecto.nombre }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="estado">Filtrar por Estado</label>
+                <select name="estado" id="estado" onchange="this.form.submit()">
+                    <option value="">Todos los estados</option>
+                    <option value="activa" {% if estado_filtro == 'activa' %}selected{% endif %}>Activa</option>
+                    <option value="pendiente" {% if estado_filtro == 'pendiente' %}selected{% endif %}>Pendiente</option>
+                    <option value="finalizada" {% if estado_filtro == 'finalizada' %}selected{% endif %}>Finalizada</option>
+                    <option value="archivada" {% if estado_filtro == 'archivada' %}selected{% endif %}>Archivada</option>
+                </select>
+            </div>
+        </form>
+        
+        <div style="display: flex; gap: 1rem;">
+            <a href="{% url 'trabajadores_diarios_dashboard' %}" class="btn-create" style="background: linear-gradient(135deg, #95a5a6, #7f8c8d);">
+                <i class="fas fa-arrow-left"></i>
+                <span>Volver a Inicio</span>
+            </a>
+            
+            <a href="{% url 'planilla_trabajadores_diarios_create_global' %}" class="btn-create">
+                <i class="fas fa-plus-circle"></i>
+                <span>Nueva Planilla</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Planillas Grid -->
+    {% if planillas %}
+        <div class="planillas-grid">
+            {% for planilla in planillas %}
+            <div class="planilla-card">
+                <div class="planilla-header">
+                    <h5 class="planilla-name">{{ planilla.nombre }}</h5>
+                    <div class="planilla-project">
+                        <i class="fas fa-building"></i>
+                        <span>{{ planilla.proyecto.nombre }}</span>
+                    </div>
+                </div>
+                
+                <div class="planilla-body">
+                    <span class="planilla-status status-{{ planilla.estado }}">
+                        {% if planilla.estado == 'activa' %}
+                            <i class="fas fa-check-circle"></i> Activa
+                        {% elif planilla.estado == 'finalizada' %}
+                            <i class="fas fa-lock"></i> Finalizada
+                        {% elif planilla.estado == 'pendiente' %}
+                            <i class="fas fa-clock"></i> Pendiente
+                        {% else %}
+                            <i class="fas fa-archive"></i> Archivada
+                        {% endif %}
+                    </span>
+                    
+                    <div class="planilla-meta">
+                        <div class="meta-item">
+                            <div class="meta-value">{{ planilla.trabajadores.count }}</div>
+                            <div class="meta-label">Trabajadores</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-value">{{ planilla.fecha_creacion|date:"d/m/Y" }}</div>
+                            <div class="meta-label">Creada</div>
+                        </div>
+                    </div>
+                    
+                    <div class="planilla-actions">
+                        <a href="{% url 'trabajadores_diarios_list' planilla.proyecto.id %}?planilla_id={{ planilla.id }}" class="btn-action btn-view">
+                            <i class="fas fa-eye"></i>
+                            <span>Ver</span>
+                        </a>
+                        <a href="{% url 'planilla_trabajadores_diarios_edit' planilla.proyecto.id planilla.id %}" class="btn-action btn-manage">
+                            <i class="fas fa-edit"></i>
+                            <span>Editar</span>
+                        </a>
+                        {% if planilla.estado != 'finalizada' %}
+                        <a href="{% url 'planilla_trabajadores_diarios_delete' planilla.proyecto.id planilla.id %}" 
+                           class="btn-action btn-delete"
+                           onclick="return confirm('¿Eliminar la planilla \"{{ planilla.nombre }}\"?\n\nEsta acción no se puede deshacer.')">
+                            <i class="fas fa-trash-alt"></i>
+                            <span>Eliminar</span>
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <h4>No hay planillas registradas</h4>
+            <p>Comienza creando tu primera planilla de trabajadores diarios</p>
+            <a href="{% url 'planilla_trabajadores_diarios_create_global' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus-circle me-2"></i>Crear Primera Planilla
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación de entrada
+    const cards = document.querySelectorAll('.planilla-card, .stat-box');
+    cards.forEach((card, idx) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, idx * 60);
+    });
+});
+</script>
+{% endblock %}
+

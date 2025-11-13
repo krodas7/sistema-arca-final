@@ -1,0 +1,477 @@
+{% extends "base.html" %}
+{% load custom_filters %}
+
+{% block title %}Trabajadores Diarios - Sistema ARCA{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f5f7fa;
+    }
+    
+    .hero-section {
+        background: linear-gradient(120deg, #2c3e50 0%, #34495e 50%, #2c3e50 100%);
+        padding: 2.5rem 2rem;
+        border-radius: 24px;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 15px 50px rgba(44, 62, 80, 0.3);
+    }
+    
+    .hero-section::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        right: -20%;
+        width: 500px;
+        height: 500px;
+        background: radial-gradient(circle, rgba(52, 152, 219, 0.15) 0%, transparent 70%);
+        border-radius: 50%;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .hero-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: white;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1rem;
+        color: rgba(255,255,255,0.85);
+        margin: 0;
+    }
+    
+    .metrics-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    .metric-card {
+        background: white;
+        border-radius: 20px;
+        padding: 1.8rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left: 4px solid var(--accent-color);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .metric-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: var(--accent-color);
+        opacity: 0.05;
+        border-radius: 50%;
+        transform: translate(30%, -30%);
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-6px);
+        box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+    }
+    
+    .metric-card.blue { --accent-color: #3498db; }
+    .metric-card.purple { --accent-color: #9b59b6; }
+    .metric-card.green { --accent-color: #2ecc71; }
+    .metric-card.orange { --accent-color: #e67e22; }
+    
+    .metric-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+    
+    .metric-icon {
+        width: 48px;
+        height: 48px;
+        background: linear-gradient(135deg, var(--accent-color), var(--accent-color));
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #2c3e50;
+        line-height: 1;
+        margin-bottom: 0.3rem;
+    }
+    
+    .metric-label {
+        font-size: 0.85rem;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .section-subtitle {
+        color: #7f8c8d;
+        font-size: 0.95rem;
+        margin-bottom: 2rem;
+    }
+    
+    .projects-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 1.8rem;
+    }
+    
+    .project-card {
+        background: white;
+        border-radius: 20px;
+        padding: 0;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 1px solid rgba(0,0,0,0.04);
+        overflow: hidden;
+    }
+    
+    .project-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 40px rgba(52, 152, 219, 0.15);
+        border-color: #3498db;
+    }
+    
+    .project-banner {
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        padding: 1.5rem;
+        color: white;
+        position: relative;
+    }
+    
+    .project-banner::after {
+        content: '';
+        position: absolute;
+        bottom: -20px;
+        right: -20px;
+        width: 100px;
+        height: 100px;
+        background: rgba(255,255,255,0.1);
+        border-radius: 50%;
+    }
+    
+    .project-name {
+        font-size: 1.3rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+        color: white;
+    }
+    
+    .project-client {
+        font-size: 0.9rem;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .project-body {
+        padding: 1.5rem;
+    }
+    
+    .project-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .project-metric {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 12px;
+        text-align: center;
+        transition: all 0.3s ease;
+    }
+    
+    .project-metric:hover {
+        background: #e9ecef;
+        transform: scale(1.05);
+    }
+    
+    .project-metric-value {
+        font-size: 1.8rem;
+        font-weight: 800;
+        color: #3498db;
+        display: block;
+    }
+    
+    .project-metric-label {
+        font-size: 0.75rem;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-top: 0.3rem;
+    }
+    
+    .btn-manage {
+        width: 100%;
+        background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        border: none;
+        color: white;
+        padding: 0.9rem;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 0.95rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+    }
+    
+    .btn-manage:hover {
+        background: linear-gradient(135deg, #2980b9 0%, #21618c 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(52, 152, 219, 0.4);
+        color: white;
+    }
+    
+    .empty-state {
+        background: white;
+        border-radius: 24px;
+        padding: 5rem 2rem;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    }
+    
+    .empty-icon {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 2rem;
+        background: linear-gradient(135deg, #ecf0f1, #bdc3c7);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3.5rem;
+        color: #95a5a6;
+    }
+    
+    .empty-state h4 {
+        color: #2c3e50;
+        font-weight: 700;
+        font-size: 1.6rem;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state p {
+        color: #7f8c8d;
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+    }
+    
+    @media (max-width: 768px) {
+        .hero-title { font-size: 1.8rem; }
+        .projects-grid { grid-template-columns: 1fr; }
+        .metrics-row { grid-template-columns: repeat(2, 1fr); }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                <i class="fas fa-users-cog"></i>
+                <span>Trabajadores Diarios</span>
+            </h1>
+            <p class="hero-subtitle">Sistema inteligente de gestión de personal temporal por proyecto</p>
+        </div>
+    </div>
+
+    <!-- Métricas Globales -->
+    <div class="metrics-row">
+        <div class="metric-card blue">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-briefcase"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_proyectos }}</div>
+            <div class="metric-label">Proyectos Activos</div>
+        </div>
+        
+        <div class="metric-card purple">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ proyectos_con_trabajadores }}</div>
+            <div class="metric-label">Con Personal Diario</div>
+        </div>
+        
+        <div class="metric-card green">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_trabajadores }}</div>
+            <div class="metric-label">Trabajadores Activos</div>
+        </div>
+        
+        <div class="metric-card orange">
+            <div class="metric-header">
+                <div class="metric-icon">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+            </div>
+            <div class="metric-value">{{ total_planillas }}</div>
+            <div class="metric-label">Planillas Totales</div>
+        </div>
+    </div>
+
+    <!-- Quick Action -->
+    <div style="text-align: center; margin-bottom: 2.5rem;">
+        <a href="{% url 'planillas_trabajadores_diarios_gestor' %}" style="
+            display: inline-flex;
+            align-items: center;
+            gap: 1.5rem;
+            background: white;
+            padding: 2rem 3rem;
+            border-radius: 16px;
+            text-decoration: none;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border: 3px solid #3498db;
+        " onmouseover="this.style.transform='translateY(-6px)'; this.style.boxShadow='0 15px 45px rgba(52,152,219,0.25)'"
+           onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 8px 30px rgba(0,0,0,0.1)'">
+            <i class="fas fa-clipboard-list" style="font-size: 3rem; color: #3498db;"></i>
+            <div style="text-align: left;">
+                <div style="font-size: 1.5rem; font-weight: 800; color: #2c3e50; margin-bottom: 0.5rem;">
+                    Gestor de Planillas
+                </div>
+                <div style="font-size: 1rem; color: #7f8c8d;">
+                    Administra todas las planillas • {{ planillas_activas }} activas
+                </div>
+            </div>
+            <i class="fas fa-arrow-circle-right" style="font-size: 2rem; color: #3498db;"></i>
+        </a>
+    </div>
+    
+    <!-- Título de Sección -->
+    <div class="section-title">
+        <i class="fas fa-list-ul"></i>
+        <span>Proyectos con Trabajadores Diarios</span>
+    </div>
+    <p class="section-subtitle">Selecciona un proyecto para gestionar sus planillas y trabajadores temporales</p>
+
+    <!-- Grid de Proyectos -->
+    {% if proyectos %}
+        <div class="projects-grid">
+            {% for proyecto in proyectos %}
+            <div class="project-card">
+                <div class="project-banner">
+                    <h5 class="project-name">{{ proyecto.nombre }}</h5>
+                    <div class="project-client">
+                        <i class="fas fa-building"></i>
+                        <span>{{ proyecto.cliente.razon_social }}</span>
+                    </div>
+                </div>
+                
+                <div class="project-body">
+                    <div class="project-metrics">
+                        <div class="project-metric">
+                            <span class="project-metric-value">{{ proyecto.trabajadores_diarios.count }}</span>
+                            <div class="project-metric-label">
+                                <i class="fas fa-users"></i> Trabajadores
+                            </div>
+                        </div>
+                        <div class="project-metric">
+                            <span class="project-metric-value">{{ proyecto.planillas_trabajadores_diarios.count }}</span>
+                            <div class="project-metric-label">
+                                <i class="fas fa-file-invoice"></i> Planillas
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <a href="{% url 'trabajadores_diarios_list' proyecto.id %}" class="btn-manage">
+                        <i class="fas fa-cogs"></i>
+                        <span>Gestionar Personal</span>
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">
+                <i class="fas fa-building"></i>
+            </div>
+            <h4>No hay proyectos disponibles</h4>
+            <p>Comienza creando un proyecto para gestionar trabajadores diarios</p>
+            <a href="{% url 'proyecto_create' %}" class="btn btn-primary btn-lg px-5">
+                <i class="fas fa-plus-circle me-2"></i>Crear Primer Proyecto
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animación escalonada para tarjetas
+    const cards = document.querySelectorAll('.metric-card, .project-card');
+    cards.forEach((card, idx) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(40px)';
+        setTimeout(() => {
+            card.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)';
+            card.style.opacity = '1';
+            card.style.transform = 'translateY(0)';
+        }, idx * 80);
+    });
+    
+    // Efecto parallax en hero
+    const hero = document.querySelector('.hero-section');
+    if (hero) {
+        window.addEventListener('scroll', () => {
+            const scroll = window.pageYOffset;
+            hero.style.transform = `translateY(${scroll * 0.3}px)`;
+        });
+    }
+});
+</script>
+{% endblock %}

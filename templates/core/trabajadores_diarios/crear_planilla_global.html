@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Crear Planilla - Trabajadores Diarios{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #f5f7fa;
+    }
+    
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .form-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2.5rem 2rem;
+        border-radius: 20px 20px 0 0;
+        text-align: center;
+    }
+    
+    .form-header h1 {
+        font-size: 2rem;
+        font-weight: 800;
+        margin: 0 0 0.5rem 0;
+    }
+    
+    .form-header p {
+        margin: 0;
+        opacity: 0.9;
+    }
+    
+    .form-body {
+        background: white;
+        padding: 2.5rem;
+        border-radius: 0 0 20px 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+    }
+    
+    .form-group {
+        margin-bottom: 1.8rem;
+    }
+    
+    .form-label {
+        display: block;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.75rem;
+        font-size: 0.95rem;
+    }
+    
+    .form-label .required {
+        color: #e74c3c;
+        margin-left: 0.25rem;
+    }
+    
+    .form-control, .form-select {
+        width: 100%;
+        padding: 1rem 1.25rem;
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        background: #f8f9fa;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+    }
+    
+    .form-select option:disabled {
+        color: #dc3545;
+        font-style: italic;
+        background: #f8d7da;
+    }
+    
+    .form-text {
+        display: block;
+        margin-top: 0.5rem;
+        font-size: 0.85rem;
+        color: #7f8c8d;
+    }
+    
+    .project-info {
+        background: linear-gradient(135deg, #ecf0f1, #bdc3c7);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-top: 1rem;
+        display: none;
+    }
+    
+    .project-info.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .project-info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .project-info-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .project-info-icon {
+        width: 36px;
+        height: 36px;
+        background: white;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #667eea;
+    }
+    
+    .project-info-text {
+        flex: 1;
+    }
+    
+    .project-info-label {
+        font-size: 0.75rem;
+        color: #7f8c8d;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .project-info-value {
+        font-size: 1rem;
+        color: #2c3e50;
+        font-weight: 700;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2.5rem;
+        padding-top: 2rem;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .btn {
+        flex: 1;
+        padding: 1rem 2rem;
+        border-radius: 12px;
+        border: none;
+        font-weight: 700;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    }
+    
+    .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+        background: #95a5a6;
+        color: white;
+    }
+    
+    .btn-secondary:hover {
+        background: #7f8c8d;
+        transform: translateY(-2px);
+    }
+    
+    .alert {
+        padding: 1rem 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .alert-warning {
+        background: #fff3cd;
+        border-left: 4px solid #f39c12;
+        color: #856404;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Breadcrumb Navigation -->
+    <div style="background: rgba(124, 58, 237, 0.1); padding: 1rem 1.5rem; border-radius: 12px; margin-bottom: 1.5rem;">
+        <nav style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: #5b21b6;">
+            <a href="{% url 'trabajadores_diarios_dashboard' %}" style="color: #7c3aed; text-decoration: none;">
+                <i class="fas fa-home"></i> Inicio
+            </a>
+            <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i>
+            <a href="{% url 'planillas_trabajadores_diarios_gestor' %}" style="color: #7c3aed; text-decoration: none;">
+                <i class="fas fa-clipboard-list"></i> Gestor
+            </a>
+            <i class="fas fa-chevron-right" style="font-size: 0.75rem;"></i>
+            <span style="font-weight: 600;">Nueva Planilla</span>
+        </nav>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" id="planillaForm">
+            {% csrf_token %}
+            
+            <div class="form-header">
+                <h1><i class="fas fa-plus-circle me-2"></i>Crear Nueva Planilla</h1>
+                <p>Configura una nueva planilla de trabajadores diarios</p>
+            </div>
+            
+            <div class="form-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-info-circle fa-2x"></i>
+                    <div>
+                        <strong>Límite de planillas:</strong> Cada proyecto puede tener máximo <strong>2 planillas activas</strong> simultáneamente. 
+                        <br>Las planillas finalizadas no cuentan para este límite.
+                    </div>
+                </div>
+                
+                <!-- Selector de Proyecto -->
+                <div class="form-group">
+                    <label for="proyecto" class="form-label">
+                        Proyecto <span class="required">*</span>
+                    </label>
+                    <select name="proyecto" id="proyecto" class="form-select" required>
+                        <option value="">Selecciona un proyecto...</option>
+                        {% for proyecto in proyectos %}
+                            <option value="{{ proyecto.id }}" 
+                                    data-planillas="{{ proyecto.planillas_trabajadores_diarios.count }}"
+                                    data-planillas-activas="{{ proyecto.planillas_activas_count }}"
+                                    data-cliente="{{ proyecto.cliente.razon_social }}"
+                                    {% if not proyecto.puede_crear_planilla %}disabled{% endif %}>
+                                {{ proyecto.nombre }}
+                                {% if not proyecto.puede_crear_planilla %} (LÍMITE ALCANZADO - {{ proyecto.planillas_activas_count }}/2 activas){% endif %}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-text">
+                        <i class="fas fa-lightbulb"></i> Selecciona el proyecto al que pertenecerá esta planilla
+                    </small>
+                    
+                    <div id="projectInfo" class="project-info">
+                        <div class="project-info-item">
+                            <div class="project-info-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div class="project-info-text">
+                                <div class="project-info-label">Cliente</div>
+                                <div class="project-info-value" id="clienteName">-</div>
+                            </div>
+                        </div>
+                        <div class="project-info-item">
+                            <div class="project-info-icon">
+                                <i class="fas fa-clipboard-list"></i>
+                            </div>
+                            <div class="project-info-text">
+                                <div class="project-info-label">Planillas existentes</div>
+                                <div class="project-info-value" id="planillasCount">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Nombre de la Planilla -->
+                <div class="form-group">
+                    <label for="nombre" class="form-label">
+                        Nombre de la Planilla <span class="required">*</span>
+                    </label>
+                    <input type="text" name="nombre" id="nombre" class="form-control" 
+                           placeholder="Ej: Planilla Semanal Enero" required>
+                    <small class="form-text">
+                        <i class="fas fa-lightbulb"></i> Usa un nombre descriptivo (ej: período, mes, semana)
+                    </small>
+                </div>
+                
+                <!-- Período (opcional) -->
+                <div class="form-group">
+                    <label for="periodo" class="form-label">
+                        Período
+                    </label>
+                    <input type="text" name="periodo" id="periodo" class="form-control" 
+                           placeholder="Ej: Del 1 al 7 de Enero">
+                    <small class="form-text">
+                        <i class="fas fa-calendar"></i> Define el período de tiempo que cubre esta planilla
+                    </small>
+                </div>
+                
+                <!-- Observaciones -->
+                <div class="form-group">
+                    <label for="observaciones" class="form-label">
+                        Observaciones
+                    </label>
+                    <textarea name="observaciones" id="observaciones" class="form-control" 
+                              rows="4" placeholder="Notas adicionales sobre esta planilla..."></textarea>
+                </div>
+                
+                <!-- Botones de Acción -->
+                <div class="form-actions">
+                    <a href="{% url 'planillas_trabajadores_diarios_gestor' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i>
+                        <span>Cancelar</span>
+                    </a>
+                    <button type="submit" class="btn btn-primary" id="btnSubmit">
+                        <i class="fas fa-save"></i>
+                        <span>Crear Planilla</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const projectSelect = document.getElementById('proyecto');
+    const projectInfo = document.getElementById('projectInfo');
+    const clienteName = document.getElementById('clienteName');
+    const planillasCount = document.getElementById('planillasCount');
+    
+    projectSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const btnSubmit = document.getElementById('btnSubmit');
+        
+        if (this.value) {
+            const cliente = selectedOption.getAttribute('data-cliente');
+            const planillas = selectedOption.getAttribute('data-planillas');
+            const planillasActivas = selectedOption.getAttribute('data-planillas-activas');
+            
+            clienteName.textContent = cliente;
+            planillasCount.textContent = `${planillasActivas}/2 planillas activas (${planillas} totales)`;
+            
+            if (parseInt(planillasActivas) >= 2) {
+                planillasCount.innerHTML = `<span style="color: #e74c3c; font-weight: 800;">⚠️ LÍMITE ALCANZADO (${planillasActivas}/2 activas)</span><br><small style="color: #7f8c8d;">Finaliza una planilla existente para crear una nueva</small>`;
+                btnSubmit.disabled = true;
+                btnSubmit.style.opacity = '0.5';
+                btnSubmit.style.cursor = 'not-allowed';
+            } else {
+                btnSubmit.disabled = false;
+                btnSubmit.style.opacity = '1';
+                btnSubmit.style.cursor = 'pointer';
+            }
+            
+            projectInfo.classList.add('show');
+        } else {
+            projectInfo.classList.remove('show');
+            btnSubmit.disabled = false;
+            btnSubmit.style.opacity = '1';
+            btnSubmit.style.cursor = 'pointer';
+        }
+    });
+    
+    // Animación de entrada
+    const form = document.querySelector('.form-container');
+    form.style.opacity = '0';
+    form.style.transform = 'translateY(30px)';
+    setTimeout(() => {
+        form.style.transition = 'all 0.6s ease';
+        form.style.opacity = '1';
+        form.style.transform = 'translateY(0)';
+    }, 100);
+});
+</script>
+{% endblock %}
+

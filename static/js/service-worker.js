@@ -10,13 +10,16 @@ const DYNAMIC_CACHE = 'arca-dynamic-v2.0.0';
 const STATIC_FILES = [
     '/',
     '/dashboard/',
-    '/static/css/bootstrap.min.css',
-    '/static/css/style.css',
-    '/static/js/bootstrap.bundle.min.js',
-    '/static/js/jquery.min.js',
-    '/static/js/chart.min.js',
-    '/static/js/fullcalendar.min.js',
+    '/static/css/global-styles.css',
+    '/static/css/neostructure-theme.css',
+    '/static/css/sidebar-layout.css',
+    '/static/css/mobile-styles.css',
+    '/static/css/neostructure-enhanced.css',
+    '/static/css/user-menu.css',
+    '/static/css/toast-notifications.css',
     '/static/js/pwa-diagnostic.js',
+    '/static/js/pwa-register.js',
+    '/static/js/dashboard-charts.js',
     '/static/manifest.json',
     '/static/images/icon-192x192-v2.png',
     '/static/images/icon-512x512-v2.png',
@@ -35,20 +38,33 @@ const API_URLS = [
 self.addEventListener('install', (event) => {
     console.log('🔧 Service Worker: Instalando...');
     
-    event.waitUntil(
-        caches.open(STATIC_CACHE)
-            .then((cache) => {
-                console.log('📦 Service Worker: Cacheando archivos estáticos...');
-                return cache.addAll(STATIC_FILES);
-            })
-            .then(() => {
-                console.log('✅ Service Worker: Instalación completada');
-                return self.skipWaiting();
-            })
-            .catch((error) => {
-                console.error('❌ Service Worker: Error en instalación:', error);
-            })
-    );
+    event.waitUntil((async () => {
+        try {
+            const cache = await caches.open(STATIC_CACHE);
+            console.log('📦 Service Worker: Cacheando archivos estáticos...');
+
+            await Promise.all(
+                STATIC_FILES.map(async (file) => {
+                    try {
+                        const response = await fetch(file, { cache: 'no-cache' });
+                        if (response.ok) {
+                            await cache.put(file, response.clone());
+                            console.log('✅ Cacheado:', file);
+                        } else {
+                            console.warn('⚠️ No se pudo cachear (status):', file, response.status);
+                        }
+                    } catch (err) {
+                        console.warn('⚠️ No se pudo cachear (fetch error):', file, err.message);
+                    }
+                })
+            );
+
+            console.log('✅ Service Worker: Instalación completada');
+            await self.skipWaiting();
+        } catch (error) {
+            console.error('❌ Service Worker: Error en instalación:', error);
+        }
+    })());
 });
 
 // Activar Service Worker

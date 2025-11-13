@@ -110,6 +110,13 @@
                 </li>
                 
                 <li class="nav-item">
+                    <a class="nav-link {% if 'trabajadores_diarios' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'trabajadores_diarios_dashboard' %}">
+                        <i class="fas fa-user-clock"></i>
+                        <span>Trabajadores Diarios</span>
+                    </a>
+                </li>
+                
+                <li class="nav-item">
                     <a class="nav-link {% if 'gastos' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gastos_dashboard' %}">
                         <i class="fas fa-file-invoice"></i>
                         <span>Gastos</span>

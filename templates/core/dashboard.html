@@ -190,6 +190,24 @@
         box-shadow: 0 5px 15px rgba(220, 53, 69, 0.4);
         color: white;
     }
+
+    .modal-backdrop {
+        z-index: 2000;
+    }
+
+    .modal {
+        z-index: 2005;
+    }
+
+    .modal-backdrop.show {
+        opacity: 0.18;
+        background-color: rgba(15, 23, 42, 0.35);
+        backdrop-filter: blur(2px);
+    }
+
+    .modal.fade .modal-dialog {
+        transition: transform 0.25s ease-out, opacity 0.25s ease-out;
+    }
     
     .fc {
         font-family: inherit;
@@ -391,7 +409,7 @@
                 <button type="button" class="btn btn-clear-calendar" onclick="limpiarCalendario()" title="Eliminar todos los eventos del calendario">
                     <i class="fas fa-trash-alt"></i> Limpiar Calendario
                 </button>
-                <button type="button" class="btn btn-add-event" data-bs-toggle="modal" data-bs-target="#modalEvento">
+                <button type="button" class="btn btn-add-event" onclick="abrirModalNuevoEvento()">
                     <i class="fas fa-plus"></i>Agregar Evento
                 </button>
             </div>
@@ -440,7 +458,7 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-1"></i>Cancelar
                 </button>
-                <button type="button" class="btn btn-primary" onclick="guardarEvento()">
+                <button type="button" class="btn btn-primary" id="btnGuardarEvento">
                     <i class="fas fa-save me-1"></i>Guardar Evento
                 </button>
             </div>
@@ -457,42 +475,169 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{% static 'js/dashboard-charts.js' %}"></script>
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const calendarEl = document.getElementById('calendar');
-        const calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            locale: 'es',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            dayMaxEvents: 3,
-            moreLinkClick: 'popover',
-            eventDisplay: 'block',
-            eventTextColor: 'white',
-            dayMaxEventRows: 3,
-            events: JSON.parse('{{ eventos_calendario_json|escapejs }}'),
-            eventClick: function(info) {
-                mostrarInfoEvento(info.event);
+    let modalEventoInstance;
+    let formEvento;
+    let botonGuardarEvento;
+    let tituloModalEvento;
+
+    function inicializarModalEvento() {
+        if (modalEventoInstance) {
+            return;
+        }
+
+        const modalEl = document.getElementById('modalEvento');
+        modalEventoInstance = new bootstrap.Modal(modalEl);
+        formEvento = document.getElementById('formEvento');
+        botonGuardarEvento = document.getElementById('btnGuardarEvento');
+        tituloModalEvento = document.getElementById('modalEventoLabel');
+
+        modalEl.addEventListener('hidden.bs.modal', () => {
+            if (formEvento) {
+                formEvento.reset();
             }
+            if (tituloModalEvento) {
+                tituloModalEvento.innerHTML = '<i class="fas fa-calendar-plus me-2"></i>Nuevo Evento';
+            }
+            configurarBotonGuardar();
         });
-        
-        calendar.render();
-        window.calendar = calendar;
-        
-        // Inicializar gráficos del dashboard
-        const evolucionData = JSON.parse('{{ evolucion_proyectos|escapejs }}');
-        const categoriasGastos = JSON.parse('{{ categorias_gastos|escapejs }}');
-        const montosGastos = JSON.parse('{{ montos_gastos|escapejs }}');
-        
-        // Esperar un poco para que Chart.js se cargue completamente
-        setTimeout(() => {
-            if (typeof initializeDashboardCharts === 'function') {
-                initializeDashboardCharts(evolucionData, categoriasGastos, montosGastos);
+
+        configurarBotonGuardar();
+    }
+
+    function configurarBotonGuardar() {
+        if (!botonGuardarEvento) {
+            return;
+        }
+        botonGuardarEvento.innerHTML = '<i class="fas fa-save me-1"></i>Guardar Evento';
+        botonGuardarEvento.onclick = guardarEvento;
+    }
+
+    function abrirModalNuevoEvento(fecha) {
+        inicializarModalEvento();
+
+        if (formEvento) {
+            formEvento.reset();
+        }
+
+        const campoFecha = document.getElementById('fechaEvento');
+        if (campoFecha) {
+            campoFecha.value = fecha || new Date().toISOString().split('T')[0];
+        }
+
+        if (tituloModalEvento) {
+            tituloModalEvento.innerHTML = '<i class="fas fa-calendar-plus me-2"></i>Nuevo Evento';
+        }
+
+        configurarBotonGuardar();
+        modalEventoInstance.show();
+    }
+
+    function obtenerPayloadEvento() {
+        return {
+            titulo: formEvento.querySelector('[name="titulo"]').value.trim(),
+            fecha_inicio: formEvento.querySelector('[name="fecha_inicio"]').value,
+            tipo: formEvento.querySelector('[name="tipo"]').value,
+            descripcion: formEvento.querySelector('[name="descripcion"]').value,
+            todo_el_dia: true,
+            color: '#667eea'
+        };
+    }
+
+    function aplicarDatosEvento(calendarEvent, dataEvento) {
+        if (!calendarEvent || !dataEvento) {
+            return;
+        }
+
+        if (dataEvento.title) {
+            calendarEvent.setProp('title', dataEvento.title);
+        }
+        if (dataEvento.start) {
+            calendarEvent.setStart(dataEvento.start);
+        }
+        if (dataEvento.end !== undefined) {
+            calendarEvent.setEnd(dataEvento.end || null);
+        }
+        if (dataEvento.backgroundColor) {
+            calendarEvent.setProp('backgroundColor', dataEvento.backgroundColor);
+            calendarEvent.setProp('borderColor', dataEvento.borderColor || dataEvento.backgroundColor);
+        }
+        if (dataEvento.extendedProps) {
+            Object.entries(dataEvento.extendedProps).forEach(([key, value]) => {
+                calendarEvent.setExtendedProp(key, value);
+            });
+        }
+    }
+
+    function obtenerEventosIniciales() {
+        try {
+            const parsed = JSON.parse('{{ eventos_calendario_json|escapejs }}');
+            if (!Array.isArray(parsed)) {
+                return [];
             }
-        }, 500);
-    });
+            return parsed.map(evento => ({
+                ...evento,
+                id: String(evento.id)
+            }));
+        } catch (error) {
+            console.error('❌ Error parseando eventos iniciales:', error);
+            return [];
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            inicializarModalEvento();
+
+            const calendarEl = document.getElementById('calendar');
+            const eventosIniciales = obtenerEventosIniciales();
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'es',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                dayMaxEvents: 3,
+                moreLinkClick: 'popover',
+                eventDisplay: 'block',
+                eventTextColor: 'white',
+                dayMaxEventRows: 3,
+                selectable: true,
+                select: function(info) {
+                    abrirModalNuevoEvento(info.startStr.split('T')[0]);
+                    calendar.unselect();
+                },
+                dateClick: function(info) {
+                    abrirModalNuevoEvento(info.dateStr);
+                },
+                events: eventosIniciales,
+                eventClick: function(info) {
+                    mostrarInfoEvento(info.event);
+                }
+            });
+            
+            calendar.render();
+            window.calendar = calendar;
+        } catch (error) {
+            console.error('❌ Error inicializando calendario:', error);
+            mostrarNotificacion('❌ No se pudo inicializar el calendario. Revisa la consola o recarga la página.', 'error');
+        }
+        
+        try {
+            const evolucionData = JSON.parse('{{ evolucion_proyectos|escapejs }}');
+            const categoriasGastos = JSON.parse('{{ categorias_gastos|escapejs }}');
+            const montosGastos = JSON.parse('{{ montos_gastos|escapejs }}');
+            
+            setTimeout(() => {
+                if (typeof initializeDashboardCharts === 'function') {
+                    initializeDashboardCharts(evolucionData, categoriasGastos, montosGastos);
+                }
+            }, 500);
+        } catch (error) {
+            console.error('❌ Error inicializando gráficos:', error);
+        }
+    }, { once: true });
     
     function mostrarNotificacion(mensaje, tipo = 'info') {
         const toastContainer = document.getElementById('toastContainer');
@@ -513,10 +658,13 @@
         toastContainer.insertAdjacentHTML('beforeend', toastHtml);
         
         const toastElement = document.getElementById(toastId);
+        if (!toastElement) {
+            console.warn('⚠️ No se pudo crear la notificación');
+            return;
+        }
         const toast = new bootstrap.Toast(toastElement);
         toast.show();
         
-        // Auto remove after 5 seconds
         setTimeout(() => {
             if (toastElement) {
                 toastElement.remove();
@@ -667,87 +815,128 @@
         document.getElementById('modalEventoLabel').innerHTML = '<i class="fas fa-edit me-2"></i>Editar Evento';
         
         // Cambiar el botón de guardar
-        const botonGuardar = document.querySelector('#modalEvento .btn-primary');
-        botonGuardar.innerHTML = '<i class="fas fa-save me-1"></i>Actualizar Evento';
-        botonGuardar.setAttribute('onclick', 'actualizarEvento(\'' + eventoId + '\')');
-        
-        // Mostrar modal de edición
-        const modal = new bootstrap.Modal(document.getElementById('modalEvento'));
-        modal.show();
+        inicializarModalEvento();
+        if (tituloModalEvento) {
+            tituloModalEvento.innerHTML = '<i class="fas fa-edit me-2"></i>Editar Evento';
+        }
+        if (botonGuardarEvento) {
+            botonGuardarEvento.innerHTML = '<i class="fas fa-save me-1"></i>Actualizar Evento';
+            botonGuardarEvento.onclick = function() {
+                actualizarEvento(eventoId);
+            };
+        }
+        modalEventoInstance.show();
     }
     
-    function guardarEvento() {
-        const form = document.getElementById('formEvento');
-        const formData = new FormData(form);
-        
-        fetch('{% url "evento_calendario_create_ajax" %}', {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    async function guardarEvento() {
+        inicializarModalEvento();
+        const payload = obtenerPayloadEvento();
+        if (!payload.titulo || !payload.fecha_inicio) {
+            mostrarNotificacion('❌ Debes indicar el título y la fecha del evento', 'error');
+            return;
+        }
+
+        if (botonGuardarEvento) {
+            botonGuardarEvento.disabled = true;
+            botonGuardarEvento.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+        }
+
+        try {
+            const response = await fetch('{% url "evento_calendario_create_ajax" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json().catch(() => ({
+                success: false,
+                message: `Respuesta inválida del servidor (status ${response.status})`
+            }));
+
+            if (!response.ok || !data.success) {
+                const mensaje = data && data.message ? data.message : 'No se pudo crear el evento.';
+                mostrarNotificacion('❌ ' + mensaje, 'error');
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Cerrar modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEvento'));
-                modal.hide();
-                
-                // Limpiar formulario
-                form.reset();
-                
-                // Recargar calendario
-                if (window.calendar) {
-                    window.calendar.refetchEvents();
-                }
-                
-                mostrarNotificacion('✅ Evento agregado correctamente', 'success');
-            } else {
-                mostrarNotificacion('❌ ' + data.message, 'error');
+
+            modalEventoInstance.hide();
+            formEvento.reset();
+
+            if (window.calendar && data.evento) {
+                const nuevoEvento = {
+                    ...data.evento,
+                    id: String(data.evento.id)
+                };
+                window.calendar.addEvent(nuevoEvento);
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
+
+            mostrarNotificacion('✅ Evento agregado correctamente', 'success');
+        } catch (error) {
+            console.error('❌ Error creando evento:', error);
             mostrarNotificacion('❌ Error de conexión al crear evento', 'error');
-        });
+        } finally {
+            if (botonGuardarEvento) {
+                botonGuardarEvento.disabled = false;
+                botonGuardarEvento.innerHTML = '<i class="fas fa-save me-1"></i>Guardar Evento';
+            }
+        }
     }
     
-    function actualizarEvento(eventoId) {
-        const form = document.getElementById('formEvento');
-        const formData = new FormData(form);
-        
-        fetch('/api/eventos/' + eventoId + '/actualizar/', {
-            method: 'PUT',
-            body: formData,
-            headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+    async function actualizarEvento(eventoId) {
+        inicializarModalEvento();
+        const payload = obtenerPayloadEvento();
+        if (!payload.titulo || !payload.fecha_inicio) {
+            mostrarNotificacion('❌ Debes indicar el título y la fecha del evento', 'error');
+            return;
+        }
+
+        if (botonGuardarEvento) {
+            botonGuardarEvento.disabled = true;
+            botonGuardarEvento.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Actualizando...';
+        }
+
+        try {
+            const response = await fetch('/api/eventos/' + eventoId + '/actualizar/', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json().catch(() => ({
+                success: false,
+                message: `Respuesta inválida del servidor (status ${response.status})`
+            }));
+
+            if (!response.ok || !data.success) {
+                const mensaje = data && data.message ? data.message : 'No se pudo actualizar el evento.';
+                mostrarNotificacion('❌ ' + mensaje, 'error');
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Cerrar modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalEvento'));
-                modal.hide();
-                
-                // Limpiar formulario
-                form.reset();
-                
-                // Recargar calendario
-                if (window.calendar) {
-                    window.calendar.refetchEvents();
-                }
-                
-                mostrarNotificacion('✅ Evento actualizado correctamente', 'success');
-            } else {
-                mostrarNotificacion('❌ ' + data.message, 'error');
+
+            modalEventoInstance.hide();
+            formEvento.reset();
+
+            if (window.calendar && data.evento) {
+                const evento = window.calendar.getEventById(eventoId);
+                aplicarDatosEvento(evento, {
+                    ...data.evento,
+                    id: String(data.evento.id)
+                });
             }
-        })
-        .catch(error => {
-            console.error('Error:', error);
+
+            mostrarNotificacion('✅ Evento actualizado correctamente', 'success');
+        } catch (error) {
+            console.error('❌ Error actualizando evento:', error);
             mostrarNotificacion('❌ Error de conexión al actualizar evento', 'error');
-        });
+        } finally {
+            configurarBotonGuardar();
+        }
     }
 </script>
 {% endblock %}
