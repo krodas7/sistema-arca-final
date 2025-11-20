@@ -782,38 +782,26 @@ class AsignacionInventarioForm(forms.ModelForm):
 class TrabajadorDiarioForm(forms.ModelForm):
     """Formulario para trabajadores diarios"""
     
+    def __init__(self, *args, **kwargs):
+        # Extraer parámetros que no son del modelo pero se pasan desde la vista
+        self.planilla = kwargs.pop('planilla', None)
+        self.proyecto = kwargs.pop('proyecto', None)
+        super().__init__(*args, **kwargs)
+    
     class Meta:
         model = TrabajadorDiario
         fields = [
-            'nombre', 'dpi', 'telefono', 'direccion', 'salario_diario', 
-            'fecha_contratacion', 'activo'
+            'nombre', 'pago_diario', 'activo'
         ]
         widgets = {
             'nombre': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Nombre completo'
             }),
-            'dpi': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '1234567890101'
-            }),
-            'telefono': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': '+502 1234-5678'
-            }),
-            'direccion': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Dirección'
-            }),
-            'salario_diario': forms.NumberInput(attrs={
+            'pago_diario': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
                 'min': '0'
-            }),
-            'fecha_contratacion': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
             }),
             'activo': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
@@ -863,12 +851,55 @@ class RegistroTrabajoForm(forms.ModelForm):
 class AnticipoTrabajadorDiarioForm(forms.ModelForm):
     """Formulario para anticipos de trabajadores diarios"""
     
+    def __init__(self, *args, **kwargs):
+        proyecto_id = kwargs.pop('proyecto_id', None)
+        trabajador_id = kwargs.pop('trabajador_id', None)
+        super().__init__(*args, **kwargs)
+        
+        # Filtrar trabajadores por proyecto
+        if proyecto_id:
+            self.fields['trabajador'].queryset = TrabajadorDiario.objects.filter(
+                proyecto_id=proyecto_id,
+                activo=True
+            ).order_by('nombre')
+        
+        # Preseleccionar trabajador si se pasa trabajador_id
+        if trabajador_id and not self.instance.pk:
+            try:
+                trabajador = TrabajadorDiario.objects.get(id=trabajador_id)
+                self.fields['trabajador'].initial = trabajador
+            except TrabajadorDiario.DoesNotExist:
+                pass
+        
+        # El estado no debe ser editable en el formulario (se establece automáticamente)
+        if 'estado' in self.fields:
+            self.fields['estado'].widget = forms.HiddenInput()
+    
     class Meta:
         model = AnticipoTrabajadorDiario
         fields = [
-            'proyecto', 'trabajador', 'monto', 'fecha_anticipo', 
-            'descripcion', 'metodo_pago', 'referencia', 'activo'
+            'trabajador', 'monto', 'fecha_anticipo', 
+            'observaciones'
         ]
+        widgets = {
+            'trabajador': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'monto': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'min': '0'
+            }),
+            'fecha_anticipo': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Observaciones adicionales'
+            })
+        }
         widgets = {
             'proyecto': forms.Select(attrs={
                 'class': 'form-select'

@@ -296,6 +296,19 @@
         color: white;
     }
     
+    .btn-warning {
+        background: linear-gradient(135deg, #f59e0b, #d97706);
+        color: white;
+        cursor: pointer;
+        border: none;
+    }
+    
+    .btn-warning:hover {
+        background: linear-gradient(135deg, #d97706, #b45309);
+        transform: scale(1.02);
+        color: white;
+    }
+    
     .empty-state {
         background: white;
         padding: 5rem 2rem;
@@ -460,7 +473,17 @@
                             <i class="fas fa-edit"></i>
                             <span>Editar</span>
                         </a>
-                        {% if planilla.estado != 'finalizada' %}
+                        {% if planilla.estado == 'finalizada' %}
+                        <form method="post" action="{% url 'reabrir_planilla_trabajadores' planilla.proyecto.id planilla.id %}" style="display: inline; margin: 0;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn-action btn-warning" 
+                                    onclick="return confirm('¿Reabrir la planilla \"{{ planilla.nombre }}\"?\n\nEsto la marcará como activa y podrás editarla nuevamente.')"
+                                    title="Reabrir/Desbloquear planilla">
+                                <i class="fas fa-unlock"></i>
+                                <span>Reabrir</span>
+                            </button>
+                        </form>
+                        {% else %}
                         <a href="{% url 'planilla_trabajadores_diarios_delete' planilla.proyecto.id planilla.id %}" 
                            class="btn-action btn-delete"
                            onclick="return confirm('¿Eliminar la planilla \"{{ planilla.nombre }}\"?\n\nEsta acción no se puede deshacer.')">

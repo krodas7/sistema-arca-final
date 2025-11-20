@@ -778,7 +778,7 @@
                                     <span class="amount amount-neutral" id="anticipos_{{ trabajador.id }}">Q0.00</span>
                                     {% endif %}
                                 {% if planilla_seleccionada.estado != 'finalizada' %}
-                                <a href="{% url 'anticipo_trabajador_diario_create' proyecto.id %}?trabajador_id={{ trabajador.id }}" 
+                                <a href="{% url 'anticipo_trabajador_diario_create' proyecto.id %}?trabajador_id={{ trabajador.id }}{% if planilla_seleccionada %}&planilla_id={{ planilla_seleccionada.id }}{% endif %}" 
                                    class="btn-table btn-icon ms-2" title="Agregar anticipo">
                                     <i class="fas fa-plus"></i>
                                 </a>
@@ -790,7 +790,7 @@
                             <td>
                                 {% if planilla_seleccionada.estado != 'finalizada' %}
                                 <div class="action-buttons" style="justify-content: center;">
-                                            <a href="{% url 'trabajador_diario_edit' proyecto.id trabajador.id %}" 
+                                            <a href="{% url 'trabajador_diario_edit' proyecto.id trabajador.id %}{% if planilla_seleccionada %}?planilla_id={{ planilla_seleccionada.id }}{% endif %}" 
                                        class="btn-table btn-edit" title="Editar">
                                         <i class="fas fa-edit"></i> Editar
                                             </a>

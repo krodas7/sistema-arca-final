@@ -957,9 +957,42 @@ class AnticipoTrabajadorDiarioForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         proyecto_id = kwargs.pop('proyecto_id', None)
+        trabajador_id = kwargs.pop('trabajador_id', None)
         super().__init__(*args, **kwargs)
+        
+        # Filtrar trabajadores por proyecto
         if proyecto_id:
-            self.fields['trabajador'].queryset = TrabajadorDiario.objects.filter(proyecto_id=proyecto_id, activo=True)
+            self.fields['trabajador'].queryset = TrabajadorDiario.objects.filter(
+                proyecto_id=proyecto_id,
+                activo=True
+            ).order_by('nombre')
+        
+        # Preseleccionar trabajador si se pasa trabajador_id
+        if trabajador_id and not self.instance.pk:
+            try:
+                trabajador = TrabajadorDiario.objects.get(id=trabajador_id)
+                self.fields['trabajador'].initial = trabajador
+            except TrabajadorDiario.DoesNotExist:
+                pass
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        trabajador = cleaned_data.get('trabajador')
+        monto = cleaned_data.get('monto')
+        
+        # Validar que se haya seleccionado un trabajador
+        if not trabajador:
+            raise forms.ValidationError({
+                'trabajador': 'Debes seleccionar un trabajador'
+            })
+        
+        # Validar que el monto sea mayor a 0
+        if monto is not None and monto <= 0:
+            raise forms.ValidationError({
+                'monto': 'El monto debe ser mayor a 0'
+            })
+        
+        return cleaned_data
     
     class Meta:
         model = AnticipoTrabajadorDiario
@@ -968,21 +1001,24 @@ class AnticipoTrabajadorDiarioForm(forms.ModelForm):
         ]
         widgets = {
             'trabajador': forms.Select(attrs={
-                'class': 'form-select'
+                'class': 'form-select',
+                'required': True
             }),
             'monto': forms.NumberInput(attrs={
                 'class': 'form-control',
                 'step': '0.01',
-                'min': '0'
+                'min': '0.01',
+                'required': True
             }),
             'fecha_anticipo': forms.DateInput(attrs={
                 'class': 'form-control',
-                'type': 'date'
+                'type': 'date',
+                'required': True
             }),
             'observaciones': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Observaciones del anticipo'
+                'rows': 3,
+                'placeholder': 'Observaciones adicionales'
             })
         }
 

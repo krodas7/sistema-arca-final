@@ -14,6 +14,7 @@ from django.core.cache import cache
 import os
 import json
 import logging
+import traceback
 from .models import (
     Cliente, Proyecto, Colaborador, Factura, Pago, 
     Gasto, CategoriaGasto, GastoFijoMensual, LogActividad, Anticipo, AplicacionAnticipo, ArchivoProyecto, Presupuesto, PartidaPresupuesto, VariacionPresupuesto,
@@ -6699,8 +6700,16 @@ def trabajadores_diarios_list(request, proyecto_id):
     """Lista de trabajadores diarios de un proyecto"""
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
     
-    # Obtener planillas del proyecto
-    planillas = PlanillaTrabajadoresDiarios.objects.filter(proyecto=proyecto).order_by('-fecha_creacion')
+    # IMPORTANTE: Obtener SOLO las planillas ACTIVAS para el selector (máximo 2 por proyecto)
+    # No mostrar planillas finalizadas en el selector para evitar confusión y duplicados
+    # Ordenar por fecha de creación descendente para mostrar las más recientes primero
+    planillas_activas = PlanillaTrabajadoresDiarios.objects.filter(
+        proyecto=proyecto,
+        estado__in=['activa', 'pendiente']
+    ).order_by('-fecha_creacion').distinct()[:2]  # Máximo 2 planillas activas, sin duplicados
+    
+    # Para el contexto, también obtener todas las planillas (para histórico, pero NO en el selector)
+    planillas_todas = PlanillaTrabajadoresDiarios.objects.filter(proyecto=proyecto).order_by('-fecha_creacion')
     
     # Obtener planilla seleccionada
     planilla_id = request.GET.get('planilla_id')
@@ -6708,12 +6717,14 @@ def trabajadores_diarios_list(request, proyecto_id):
     if planilla_id:
         try:
             planilla_seleccionada = PlanillaTrabajadoresDiarios.objects.get(id=planilla_id, proyecto=proyecto)
+            # Si la planilla seleccionada está finalizada, permitir seleccionarla (para ver histórico)
+            # pero NO incluirla en el selector de planillas activas
         except PlanillaTrabajadoresDiarios.DoesNotExist:
             pass
     
-    # Si no hay planilla seleccionada, usar la primera activa (no finalizadas)
+    # Si no hay planilla seleccionada, usar la primera activa
     if not planilla_seleccionada:
-        planilla_seleccionada = planillas.filter(estado='activa').first()
+        planilla_seleccionada = planillas_activas.first()
         # No seleccionar automáticamente planillas finalizadas
     
     # Filtrar trabajadores por planilla seleccionada
@@ -6751,13 +6762,18 @@ def trabajadores_diarios_list(request, proyecto_id):
             pago = t.pago_diario or Decimal('0.00')
             
             # Calcular anticipos aplicados de este trabajador
-            anticipos_trabajador = AnticipoTrabajadorDiario.objects.filter(
+            # IMPORTANTE: Usar la relación directamente desde el trabajador para asegurar que se sumen todos
+            anticipos_qs = AnticipoTrabajadorDiario.objects.filter(
                 trabajador=t,
                 estado='aplicado'
-            ).aggregate(total=Sum('monto'))['total'] or Decimal('0.00')
+            )
+            # Calcular total sumando todos los montos (más seguro que aggregate)
+            total_anticipos = sum(anticipo.monto for anticipo in anticipos_qs)
+            anticipos_trabajador = Decimal(str(total_anticipos))
             
             # Agregar el monto de anticipos como atributo temporal
             t.anticipos_monto = anticipos_trabajador
+            t.anticipos_count = anticipos_qs.count()  # Contador de anticipos para debugging
             t.dias_calc = dias
             t.total_bruto = dias * pago
             t.total_neto = (dias * pago) - anticipos_trabajador
@@ -6793,13 +6809,14 @@ def trabajadores_diarios_list(request, proyecto_id):
     
     # No mostrar mensajes automáticos al cargar la página para evitar notificaciones innecesarias
     
-    # Contar planillas finalizadas del proyecto
-    planillas_finalizadas = planillas.filter(estado='finalizada').count()
+    # Contar planillas finalizadas del proyecto (usar todas las planillas, no solo activas)
+    planillas_finalizadas = planillas_todas.filter(estado='finalizada').count()
     
     context = {
         'proyecto': proyecto,
         'trabajadores': trabajadores,
-        'planillas': planillas,
+        'planillas': planillas_activas,  # Solo mostrar planillas activas en el selector (máximo 2)
+        'planillas_todas': planillas_todas,  # Todas las planillas para histórico (si se necesita)
         'planilla_seleccionada': planilla_seleccionada,
         'total_trabajadores': total_trabajadores,
         'total_a_pagar': total_a_pagar,
@@ -7104,18 +7121,23 @@ def finalizar_planilla_trabajadores(request, proyecto_id):
             print(f"✅ Existe archivo: {os.path.exists(archivo.archivo.path)}")
         
         # 4. Crear registro de planilla liquidada
+        # IMPORTANTE: Usar total_bruto_general (salarios + anticipos) para el dashboard del proyecto
         from core.models import PlanillaLiquidada
+        # El total bruto ya incluye todos los salarios, así que total_planilla será total_bruto_general
+        # que representa el costo total (salarios base, y los anticipos están registrados por separado)
+        total_para_dashboard = total_bruto_general  # Total bruto incluye salarios, anticipos se suman por separado en el concepto
+        
         planilla_liquidada = PlanillaLiquidada.objects.create(
             proyecto=proyecto,
-            total_salarios=Decimal(str(total_neto_general)),
+            total_salarios=Decimal(str(total_bruto_general)),  # Total de salarios sin descontar anticipos
             total_anticipos=Decimal(str(total_anticipos_general)),
-            total_planilla=Decimal(str(total_neto_general)),
+            total_planilla=Decimal(str(total_bruto_general)),  # Usar total bruto para que se sume correctamente al dashboard
             cantidad_personal=trabajadores.count(),
             liquidada_por=request.user,
-            observaciones=f'Planilla de trabajadores diarios finalizada - Total: Q{total_neto_general:.2f}'
+            observaciones=f'Planilla de trabajadores diarios finalizada - Total Bruto: Q{total_bruto_general:.2f}, Anticipos: Q{total_anticipos_general:.2f}, Neto: Q{total_neto_general:.2f}'
         )
         
-        print(f"✅ Planilla liquidada creada: ID {planilla_liquidada.id}, Total: Q{total_neto_general:.2f}")
+        print(f"✅ Planilla liquidada creada: ID {planilla_liquidada.id}, Total Bruto: Q{total_bruto_general:.2f}, Anticipos: Q{total_anticipos_general:.2f}, Neto: Q{total_neto_general:.2f}")
         
         # 5. Eliminar anticipos aplicados de los trabajadores de esta planilla
         from core.models import AnticipoTrabajadorDiario
@@ -7284,11 +7306,34 @@ def trabajador_diario_edit(request, proyecto_id, trabajador_id):
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
     trabajador = get_object_or_404(TrabajadorDiario, id=trabajador_id, proyecto=proyecto)
     
+    # Obtener planilla_id de la URL si existe (para redireccionar correctamente)
+    planilla_id = request.GET.get('planilla_id')
+    
+    # IMPORTANTE: Capturar la planilla ANTES de cualquier operación para preservarla
+    planilla_original = trabajador.planilla
+    
     if request.method == 'POST':
         form = TrabajadorDiarioForm(request.POST, instance=trabajador)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Trabajador diario actualizado correctamente.')
+            # Preservar proyecto y planilla al guardar (no deben cambiar al editar)
+            trabajador_editado = form.save(commit=False)
+            trabajador_editado.proyecto = proyecto
+            
+            # Preservar la planilla original (usar la capturada o la del trabajador)
+            if planilla_original:
+                trabajador_editado.planilla = planilla_original
+            elif trabajador.planilla:
+                trabajador_editado.planilla = trabajador.planilla
+            
+            # Guardar el trabajador con su planilla preservada
+            trabajador_editado.save()
+            
+            messages.success(request, f'✅ Trabajador "{trabajador_editado.nombre}" actualizado correctamente.')
+            
+            # Redirigir con planilla_id si existe (usar el de la URL o el de la planilla original)
+            planilla_redirect = planilla_id or (planilla_original.id if planilla_original else None)
+            if planilla_redirect:
+                return redirect(f'{reverse("trabajadores_diarios_list", args=[proyecto_id])}?planilla_id={planilla_redirect}')
             return redirect('trabajadores_diarios_list', proyecto_id=proyecto_id)
     else:
         form = TrabajadorDiarioForm(instance=trabajador)
@@ -7296,7 +7341,8 @@ def trabajador_diario_edit(request, proyecto_id, trabajador_id):
     return render(request, 'core/trabajadores_diarios/edit.html', {
         'form': form,
         'proyecto': proyecto,
-        'trabajador': trabajador
+        'trabajador': trabajador,
+        'planilla_id': planilla_id or (planilla_original.id if planilla_original else None)
     })
 
 
@@ -7801,6 +7847,8 @@ def anticipo_trabajador_diario_create(request, proyecto_id):
     
     # Detectar planilla seleccionada desde la URL
     planilla_id = request.GET.get('planilla_id') or request.POST.get('planilla_id')
+    trabajador_id = request.GET.get('trabajador_id') or request.POST.get('trabajador_id')
+    
     planilla_seleccionada = None
     if planilla_id:
         try:
@@ -7812,7 +7860,12 @@ def anticipo_trabajador_diario_create(request, proyecto_id):
         logger.info(f"📝 POST recibido para crear anticipo de trabajador diario")
         logger.info(f"📝 Datos POST: {request.POST}")
         
-        form = AnticipoTrabajadorDiarioForm(request.POST, proyecto_id=proyecto_id)
+        form = AnticipoTrabajadorDiarioForm(
+            request.POST, 
+            proyecto_id=proyecto_id,
+            trabajador_id=trabajador_id
+        )
+        
         # Filtrar trabajadores por planilla seleccionada (si existe)
         if planilla_seleccionada:
             form.fields['trabajador'].queryset = TrabajadorDiario.objects.filter(
@@ -7829,42 +7882,107 @@ def anticipo_trabajador_diario_create(request, proyecto_id):
         logger.info(f"📝 Formulario creado: {form}")
         
         if form.is_valid():
-            logger.info("✅ Formulario es válido, guardando anticipo...")
-            anticipo = form.save(commit=False)
-            anticipo.creado_por = request.user
-            # Los anticipos de trabajadores diarios se aplican directamente (no necesitan aprobación)
-            anticipo.estado = 'aplicado'
-            anticipo.save()
-            logger.info(f"✅ Anticipo guardado con ID: {anticipo.id}")
-            
-            # Registrar actividad
-            LogActividad.objects.create(
-                usuario=request.user,
-                accion='Crear',
-                modulo='Anticipos Trabajadores Diarios',
-                descripcion=f'Anticipo creado y aplicado: {anticipo.trabajador.nombre} - Q{anticipo.monto}',
-                ip_address=request.META.get('REMOTE_ADDR')
-            )
-            
-            messages.success(request, 
-                f'✅ <strong>Anticipo creado y aplicado exitosamente</strong><br>'
-                f'👤 Trabajador: <strong>{anticipo.trabajador.nombre}</strong><br>'
-                f'💰 Monto: <strong>Q{anticipo.monto:,.2f}</strong><br>'
-                f'🏗️ Proyecto: <strong>{proyecto.nombre}</strong>',
-                extra_tags='html'
-            )
-            logger.info("✅ Redirigiendo a anticipo_trabajador_diario_list")
-            # Preservar planilla seleccionada al regresar
-            if planilla_id:
-                return redirect(f'{reverse("anticipo_trabajador_diario_list", args=[proyecto_id])}?planilla_id={planilla_id}')
-            return redirect('anticipo_trabajador_diario_list', proyecto_id=proyecto_id)
+            try:
+                trabajador_seleccionado = form.cleaned_data.get('trabajador')
+                monto_ingresado = form.cleaned_data.get('monto')
+                
+                logger.info("✅ Formulario es válido, guardando anticipo...")
+                logger.info(f"📝 Datos validados - Trabajador: {trabajador_seleccionado} (ID: {trabajador_seleccionado.id if trabajador_seleccionado else None}), Monto: {monto_ingresado}")
+                
+                # Validar que el trabajador esté presente
+                if not trabajador_seleccionado:
+                    messages.error(request, '❌ <strong>Error:</strong> Debes seleccionar un trabajador', extra_tags='html')
+                    logger.error("❌ Trabajador no seleccionado en el formulario")
+                elif not monto_ingresado or monto_ingresado <= 0:
+                    messages.error(request, '❌ <strong>Error:</strong> El monto debe ser mayor a 0', extra_tags='html')
+                    logger.error(f"❌ Monto inválido: {monto_ingresado}")
+                else:
+                    # Crear el anticipo
+                    anticipo = form.save(commit=False)
+                    anticipo.creado_por = request.user
+                    # Los anticipos de trabajadores diarios se aplican directamente (no necesitan aprobación)
+                    anticipo.estado = 'aplicado'
+                    anticipo.save()
+                    
+                    logger.info(f"✅ Anticipo guardado con ID: {anticipo.id}, estado: {anticipo.estado}, trabajador: {anticipo.trabajador.nombre}, monto: {anticipo.monto}")
+                    
+                    # Verificar que se guardó correctamente
+                    try:
+                        anticipo_verificado = AnticipoTrabajadorDiario.objects.get(id=anticipo.id)
+                        logger.info(f"✅ Verificación: Anticipo ID {anticipo_verificado.id} existe en BD, estado: {anticipo_verificado.estado}")
+                        
+                        # Contar anticipos totales del trabajador
+                        total_anticipos = AnticipoTrabajadorDiario.objects.filter(
+                            trabajador=trabajador_seleccionado,
+                            estado='aplicado'
+                        ).count()
+                        total_monto = sum(a.monto for a in AnticipoTrabajadorDiario.objects.filter(
+                            trabajador=trabajador_seleccionado,
+                            estado='aplicado'
+                        ))
+                        
+                        logger.info(f"✅ Total anticipos del trabajador: {total_anticipos}, Total monto: Q{total_monto}")
+                        
+                        # Registrar actividad
+                        LogActividad.objects.create(
+                            usuario=request.user,
+                            accion='Crear',
+                            modulo='Anticipos Trabajadores Diarios',
+                            descripcion=f'Anticipo creado y aplicado: {anticipo.trabajador.nombre} - Q{anticipo.monto} (Total anticipos: {total_anticipos})',
+                            ip_address=request.META.get('REMOTE_ADDR')
+                        )
+                        
+                        messages.success(request, 
+                            f'✅ <strong>Anticipo creado y aplicado exitosamente</strong><br>'
+                            f'👤 Trabajador: <strong>{anticipo.trabajador.nombre}</strong><br>'
+                            f'💰 Monto: <strong>Q{anticipo.monto:,.2f}</strong><br>'
+                            f'📊 Total anticipos del trabajador: <strong>{total_anticipos}</strong> (Total: Q{total_monto:,.2f})<br>'
+                            f'🏗️ Proyecto: <strong>{proyecto.nombre}</strong>',
+                            extra_tags='html'
+                        )
+                        
+                        # IMPORTANTE: Redirigir de vuelta a la lista de anticipos para permitir crear más anticipos
+                        logger.info("✅ Redirigiendo a anticipo_trabajador_diario_list")
+                        if planilla_id:
+                            return redirect(f'{reverse("anticipo_trabajador_diario_list", args=[proyecto_id])}?planilla_id={planilla_id}')
+                        return redirect('anticipo_trabajador_diario_list', proyecto_id=proyecto_id)
+                    except AnticipoTrabajadorDiario.DoesNotExist:
+                        logger.error(f"❌ ERROR CRÍTICO: Anticipo ID {anticipo.id} no se encontró después de guardar")
+                        messages.error(request, f'❌ <strong>Error crítico:</strong> El anticipo no se guardó correctamente. ID: {anticipo.id}', extra_tags='html')
+            except Exception as e:
+                logger.error(f"❌ Error al guardar anticipo: {str(e)}")
+                logger.error(f"❌ Traceback: {traceback.format_exc()}")
+                messages.error(request, f'❌ <strong>Error al guardar el anticipo:</strong> {str(e)}<br><small>Revisa los logs para más detalles</small>', extra_tags='html')
         else:
             logger.error(f"❌ Formulario no es válido. Errores: {form.errors}")
+            logger.error(f"❌ Datos recibidos: {dict(request.POST)}")
+            logger.error(f"❌ Campos del formulario: {list(form.fields.keys())}")
+            
+            # Mostrar errores de forma más clara y detallada
+            error_count = 0
             for field, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f"{field}: {error}")
+                    error_count += 1
+                    # Mensaje más descriptivo para el usuario
+                    if field == 'trabajador':
+                        messages.error(request, f'❌ <strong>Debes seleccionar un trabajador</strong>', extra_tags='html')
+                    elif field == 'monto':
+                        messages.error(request, f'❌ <strong>El monto es requerido y debe ser mayor a 0</strong>', extra_tags='html')
+                    elif field == 'fecha_anticipo':
+                        messages.error(request, f'❌ <strong>La fecha del anticipo es requerida</strong>', extra_tags='html')
+                    else:
+                        messages.error(request, f"❌ <strong>Error en {field}:</strong> {error}", extra_tags='html')
+                    logger.error(f"❌ Error #{error_count} en {field}: {error}")
+            
+            # Mostrar mensaje general si hay errores
+            if error_count > 0:
+                messages.warning(request, f'⚠️ <strong>Por favor corrige los {error_count} error(es) indicados arriba antes de guardar</strong>', extra_tags='html')
     else:
-        form = AnticipoTrabajadorDiarioForm(proyecto_id=proyecto_id)
+        form = AnticipoTrabajadorDiarioForm(
+            proyecto_id=proyecto_id,
+            trabajador_id=trabajador_id
+        )
+        
         # Filtrar trabajadores por planilla seleccionada (si existe)
         if planilla_seleccionada:
             form.fields['trabajador'].queryset = TrabajadorDiario.objects.filter(
