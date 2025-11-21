@@ -444,7 +444,7 @@ def dashboard(request):
             if isinstance(value, Decimal):
                 logger.debug(f"Variable {key} es Decimal: {value}")
         
-        return render(request, 'core/dashboard.html', context)
+        return render(request, 'core/dashboard.html.broken', context)
         
     except Exception as e:
         logger.error(f"Error en dashboard: {str(e)}")
@@ -469,7 +469,7 @@ def dashboard(request):
             'meses_grafico': [],
         }
         
-        return render(request, 'core/dashboard.html', context)
+        return render(request, 'core/dashboard.html.broken', context)
 
 
 # ===== CRUD CLIENTES =====
