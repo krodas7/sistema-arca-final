@@ -7188,6 +7188,208 @@ def finalizar_planilla_trabajadores(request, proyecto_id):
 
 
 @login_required
+def generar_pdf_planilla_trabajadores(request, proyecto_id):
+    """Generar PDF de la planilla sin liquidar: solo genera y descarga el PDF"""
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+    
+    # Obtener planilla seleccionada
+    planilla_id = request.GET.get('planilla_id') or request.POST.get('planilla_id')
+    if not planilla_id:
+        messages.error(request, '❌ No se especificó una planilla. Por favor selecciona una planilla primero.')
+        return redirect('trabajadores_diarios_list', proyecto_id=proyecto_id)
+
+    try:
+        planilla = PlanillaTrabajadoresDiarios.objects.get(id=planilla_id, proyecto=proyecto)
+    except PlanillaTrabajadoresDiarios.DoesNotExist:
+        messages.error(request, '❌ La planilla especificada no existe o no pertenece a este proyecto.')
+        return redirect('trabajadores_diarios_list', proyecto_id=proyecto_id)
+    
+    try:
+        # Verificar que hay trabajadores en ESTA planilla específica
+        trabajadores = TrabajadorDiario.objects.filter(proyecto=proyecto, planilla=planilla)
+        if not trabajadores.exists():
+            messages.warning(request, f'No hay trabajadores en la planilla "{planilla.nombre}".')
+            return redirect('trabajadores_diarios_list', proyecto_id=proyecto_id)
+        
+        # 1. Generar PDF de la planilla
+        from django.core.files.base import ContentFile
+        from django.utils import timezone
+        from io import BytesIO
+        from reportlab.lib.pagesizes import A4, landscape
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib import colors
+        from reportlab.lib.units import inch
+        from reportlab.lib.enums import TA_CENTER
+        import os
+        
+        # Crear el buffer para el PDF
+        buffer = BytesIO()
+        
+        # Crear el documento PDF en orientación horizontal
+        doc = SimpleDocTemplate(buffer, pagesize=landscape(A4), rightMargin=72, leftMargin=72, topMargin=72, bottomMargin=18)
+        
+        # Obtener estilos
+        styles = getSampleStyleSheet()
+        
+        # Crear estilos personalizados
+        title_style = ParagraphStyle(
+            'CustomTitle',
+            parent=styles['Heading1'],
+            fontSize=18,
+            spaceAfter=30,
+            alignment=TA_CENTER,
+            textColor=colors.darkblue
+        )
+        
+        subtitle_style = ParagraphStyle(
+            'CustomSubtitle',
+            parent=styles['Heading2'],
+            fontSize=14,
+            spaceAfter=20,
+            alignment=TA_CENTER,
+            textColor=colors.darkgreen
+        )
+        
+        normal_style = ParagraphStyle(
+            'CustomNormal',
+            parent=styles['Normal'],
+            fontSize=10,
+            spaceAfter=12
+        )
+        
+        # Contenido del PDF
+        story = []
+        
+        # Título principal
+        story.append(Paragraph("PLANILLA DE TRABAJADORES DIARIOS", title_style))
+        story.append(Spacer(1, 12))
+        
+        # Información del proyecto y planilla
+        story.append(Paragraph(f"<b>Proyecto:</b> {proyecto.nombre}", normal_style))
+        story.append(Paragraph(f"<b>Cliente:</b> {proyecto.cliente.razon_social}", normal_style))
+        story.append(Paragraph(f"<b>Planilla:</b> {planilla.nombre}", normal_style))
+        if planilla.fecha_inicio and planilla.fecha_fin:
+            story.append(Paragraph(f"<b>Período:</b> {planilla.fecha_inicio.strftime('%d/%m/%Y')} - {planilla.fecha_fin.strftime('%d/%m/%Y')}", normal_style))
+        story.append(Paragraph(f"<b>Fecha de Generación:</b> {timezone.now().strftime('%d/%m/%Y %H:%M')}", normal_style))
+        story.append(Spacer(1, 20))
+        
+        # Calcular totales con anticipos
+        total_trabajadores = trabajadores.count()
+        total_bruto_general = 0
+        total_anticipos_general = 0
+        total_neto_general = 0
+        
+        # Crear tabla con columnas de anticipos
+        data = [['No.', 'Nombre del Trabajador', 'Pago Diario', 'Días Trabajados', 'Total Bruto', 'Anticipos', 'Total Neto']]
+        
+        for i, trabajador in enumerate(trabajadores, 1):
+            dias_trabajados = sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all())
+            if dias_trabajados == 0:
+                dias_trabajados = 1  # Valor por defecto si no hay registros
+            
+            total_bruto = float(trabajador.pago_diario) * dias_trabajados
+            
+            # Calcular anticipos del trabajador
+            from core.models import AnticipoTrabajadorDiario
+            anticipos_trabajador = AnticipoTrabajadorDiario.objects.filter(
+                trabajador=trabajador,
+                estado='aplicado'
+            )
+            total_anticipos_trabajador = sum(anticipo.monto_aplicado for anticipo in anticipos_trabajador)
+            
+            # Total neto = Total bruto - Anticipos
+            total_neto = total_bruto - float(total_anticipos_trabajador)
+            
+            total_bruto_general += total_bruto
+            total_anticipos_general += float(total_anticipos_trabajador)
+            total_neto_general += total_neto
+            
+            data.append([
+                str(i),
+                trabajador.nombre,
+                f"Q{trabajador.pago_diario:.2f}",
+                str(dias_trabajados),
+                f"Q{total_bruto:.2f}",
+                f"Q{total_anticipos_trabajador:.2f}",
+                f"Q{total_neto:.2f}"
+            ])
+        
+        # Agregar fila de totales
+        data.append(['', '', '', 'TOTAL GENERAL:', f"Q{total_bruto_general:.2f}", f"Q{total_anticipos_general:.2f}", f"Q{total_neto_general:.2f}"])
+        
+        # Crear la tabla con columnas adicionales (7 columnas total)
+        table = Table(data, colWidths=[0.6*inch, 2.5*inch, 1.2*inch, 1.2*inch, 1.4*inch, 1.4*inch, 1.4*inch])
+        
+        # Estilo de la tabla
+        table.setStyle(TableStyle([
+            # Encabezados
+            ('BACKGROUND', (0, 0), (-1, 0), colors.darkblue),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 10),
+            
+            # Fila de totales
+            ('BACKGROUND', (0, -1), (-1, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, -1), (-1, -1), colors.black),
+            ('ALIGN', (0, -1), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, -1), (-1, -1), 10),
+            
+            # Bordes
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+        
+        story.append(table)
+        story.append(Spacer(1, 30))
+        
+        # Información adicional
+        story.append(Paragraph(f"<b>Total de Trabajadores:</b> {total_trabajadores}", normal_style))
+        story.append(Paragraph(f"<b>Total Bruto a Pagar:</b> Q{total_bruto_general:.2f}", normal_style))
+        story.append(Paragraph(f"<b>Total Anticipos Aplicados:</b> Q{total_anticipos_general:.2f}", normal_style))
+        story.append(Paragraph(f"<b>Total Neto a Pagar:</b> Q{total_neto_general:.2f}", normal_style))
+        
+        # Construir el PDF
+        doc.build(story)
+        
+        # Obtener el contenido del buffer
+        pdf_content = buffer.getvalue()
+        buffer.close()
+        
+        # 2. Registrar actividad
+        from core.models import LogActividad
+        trabajadores_count = trabajadores.count()
+        nombre_archivo = f"planilla_trabajadores_{planilla.nombre}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        
+        LogActividad.objects.create(
+            usuario=request.user,
+            accion='Generar PDF Planilla',
+            modulo='Trabajadores Diarios',
+            descripcion=f"PDF de planilla '{planilla.nombre}' generado y descargado: {nombre_archivo}. Trabajadores: {trabajadores_count}. (Sin liquidar)",
+            ip_address=request.META.get('REMOTE_ADDR')
+        )
+        
+        # 3. Devolver el PDF como descarga
+        from django.http import HttpResponse
+        
+        # Limpiar el nombre del archivo para que sea válido (sin caracteres especiales)
+        nombre_archivo_limpio = nombre_archivo.replace('/', '_').replace('\\', '_')
+        
+        response = HttpResponse(pdf_content, content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{nombre_archivo_limpio}"'
+        return response
+        
+    except Exception as e:
+        print(f"❌ Error al generar PDF de planilla: {e}")
+        import traceback
+        traceback.print_exc()
+        messages.error(request, f'Error al generar el PDF de la planilla: {str(e)}')
+        return redirect('trabajadores_diarios_list', proyecto_id=proyecto_id)
+
+
+@login_required
 def reabrir_planilla_trabajadores(request, proyecto_id, planilla_id):
     """Reabrir una planilla finalizada para continuar editando"""
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)

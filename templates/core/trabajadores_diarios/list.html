@@ -691,8 +691,11 @@
                 </a>
                 
                 {% if planilla_seleccionada and trabajadores %}
+                <button type="button" class="btn btn-primary" onclick="generarPDFPlanilla()">
+                    <i class="fas fa-file-pdf"></i> Generar PDF
+                </button>
                 <button type="button" class="btn btn-success" onclick="finalizarPlanilla()">
-                    <i class="fas fa-check-circle"></i> Finalizar Planilla
+                    <i class="fas fa-check-circle"></i> Liquidar Planilla
                 </button>
                 {% endif %}
             {% endif %}
@@ -946,8 +949,38 @@ function guardarDias(trabajadorId, dias) {
     }).catch(error => console.error('Error:', error));
 }
 
+function generarPDFPlanilla() {
+    // Crear formulario para descargar el PDF
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '{% url "generar_pdf_planilla_trabajadores" proyecto.id %}';
+    form.target = '_blank'; // Abrir en nueva pestaña para la descarga
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = '{{ csrf_token }}';
+    form.appendChild(csrf);
+    
+    {% if planilla_seleccionada %}
+    const planilla = document.createElement('input');
+    planilla.type = 'hidden';
+    planilla.name = 'planilla_id';
+    planilla.value = '{{ planilla_seleccionada.id }}';
+    form.appendChild(planilla);
+    {% endif %}
+    
+    document.body.appendChild(form);
+    form.submit();
+    
+    // Remover el formulario después de un momento
+    setTimeout(() => {
+        document.body.removeChild(form);
+    }, 1000);
+}
+
 function finalizarPlanilla() {
-    if (!confirm('¿Finalizar la planilla "{{ planilla_seleccionada.nombre }}"?\n\nEsto generará un PDF y registrará los pagos.')) {
+    if (!confirm('¿Liquidar la planilla "{{ planilla_seleccionada.nombre }}"?\n\nEsto generará un PDF, registrará los pagos, eliminará anticipos y marcará la planilla como finalizada.')) {
         return;
     }
     

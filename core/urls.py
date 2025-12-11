@@ -46,6 +46,7 @@ urlpatterns = [
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/', views.trabajadores_diarios_list, name='trabajadores_diarios_list'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/crear/', views.trabajador_diario_create, name='trabajador_diario_create'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/finalizar/', views.finalizar_planilla_trabajadores, name='finalizar_planilla_trabajadores'),
+    path('proyectos/<int:proyecto_id>/trabajadores-diarios/generar-pdf/', views.generar_pdf_planilla_trabajadores, name='generar_pdf_planilla_trabajadores'),
     path(
         'proyectos/<int:proyecto_id>/trabajadores-diarios/planilla/<int:planilla_id>/reabrir/',
         views.reabrir_planilla_trabajadores,
