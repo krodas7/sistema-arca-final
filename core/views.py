@@ -8670,7 +8670,13 @@ def planilla_trabajadores_diarios_create(request, proyecto_id):
             planilla.creada_por = request.user
             planilla.save()
             
-            messages.success(request, f'✅ Planilla "{planilla.nombre}" creada exitosamente. Quedan {2 - planillas_existentes} planillas disponibles.')
+            # Recalcular planillas activas después de crear la nueva
+            planillas_activas_actualizadas = PlanillaTrabajadoresDiarios.objects.filter(
+                proyecto=proyecto, 
+                estado__in=['activa', 'pendiente']
+            ).count()
+            
+            messages.success(request, f'✅ Planilla "{planilla.nombre}" creada exitosamente. Quedan {2 - planillas_activas_actualizadas} planillas disponibles.')
             return redirect('planilla_trabajadores_diarios_detail', proyecto_id=proyecto_id, planilla_id=planilla.id)
     else:
         form = PlanillaTrabajadoresDiariosForm(proyecto=proyecto)
@@ -8678,8 +8684,8 @@ def planilla_trabajadores_diarios_create(request, proyecto_id):
     context = {
         'proyecto': proyecto,
         'form': form,
-        'planillas_existentes': planillas_existentes,
-        'planillas_disponibles': 3 - planillas_existentes,
+        'planillas_existentes': planillas_activas,
+        'planillas_disponibles': 2 - planillas_activas,
     }
     
     return render(request, 'core/planillas_trabajadores_diarios/create.html', context)
