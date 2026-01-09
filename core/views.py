@@ -233,11 +233,11 @@ def dashboard(request):
                 }
             })
         
-        # Eventos de proyectos - Inicio
-        proyectos_inicio = Proyecto.objects.filter(fecha_inicio__isnull=False, activo=True)
-        for proyecto in proyectos_inicio:
+        # Eventos de proyectos
+        proyectos = Proyecto.objects.filter(fecha_inicio__isnull=False)[:5]
+        for proyecto in proyectos:
             eventos_calendario.append({
-                'id': f'proyecto_inicio_{proyecto.id}',
+                'id': f'proyecto_{proyecto.id}',
                 'title': f'Inicio: {proyecto.nombre}',
                 'start': proyecto.fecha_inicio.isoformat(),
                 'end': proyecto.fecha_inicio.isoformat(),
@@ -247,27 +247,7 @@ def dashboard(request):
                 'extendedProps': {
                     'tipo': 'proyecto',
                     'descripcion': f'Inicio del proyecto {proyecto.nombre}',
-                    'todo_el_dia': True,
-                    'proyecto_id': proyecto.id
-                }
-            })
-        
-        # Eventos de proyectos - Finalización
-        proyectos_fin = Proyecto.objects.filter(fecha_fin__isnull=False, activo=True)
-        for proyecto in proyectos_fin:
-            eventos_calendario.append({
-                'id': f'proyecto_fin_{proyecto.id}',
-                'title': f'Finalización: {proyecto.nombre}',
-                'start': proyecto.fecha_fin.isoformat(),
-                'end': proyecto.fecha_fin.isoformat(),
-                'className': 'evento-proyecto-fin',
-                'backgroundColor': '#dc3545',
-                'borderColor': '#dc3545',
-                'extendedProps': {
-                    'tipo': 'proyecto_fin',
-                    'descripcion': f'Finalización del proyecto {proyecto.nombre}',
-                    'todo_el_dia': True,
-                    'proyecto_id': proyecto.id
+                    'todo_el_dia': True
                 }
             })
         
@@ -277,18 +257,16 @@ def dashboard(request):
             eventos_calendario.append(evento.to_calendar_event())
         
         # ============================================================================
-        # EVENTOS PRÓXIMOS PARA EL DASHBOARD
+        # EVENTOS PRÓXIMOS PARA LA SECCIÓN "ACTIVIDAD RECIENTE"
         # ============================================================================
-        # Inicializar eventos_proximos siempre como lista vacía por defecto
         eventos_proximos = []
         
         try:
             from datetime import timedelta
             hoy = timezone.now().date()
-            mañana = hoy + timedelta(days=1)
             proximos_7_dias = hoy + timedelta(days=7)
             
-            # Eventos de facturas próximas
+            # Eventos de facturas próximas (vencimientos)
             try:
                 facturas_proximas = Factura.objects.filter(
                     fecha_vencimiento__gte=hoy,
@@ -298,12 +276,12 @@ def dashboard(request):
                 for factura in facturas_proximas:
                     if factura.fecha_vencimiento and factura.numero_factura:
                         eventos_proximos.append({
-                            'id': f'factura_{factura.id}',
                             'titulo': f'Vencimiento: {factura.numero_factura}',
                             'fecha': factura.fecha_vencimiento,
                             'tipo': 'vencimiento',
-                            'color': '#dc3545',
-                            'descripcion': f'Vencimiento de factura {factura.numero_factura}',
+                            'icono': 'fa-file-invoice',
+                            'color': 'danger',
+                            'descripcion': f'Factura {factura.numero_factura} vence el {factura.fecha_vencimiento.strftime("%d/%m/%Y")}',
                             'dias_restantes': (factura.fecha_vencimiento - hoy).days
                         })
             except Exception as e:
@@ -320,12 +298,12 @@ def dashboard(request):
                 for proyecto in proyectos_inicio_proximos:
                     if proyecto.fecha_inicio and proyecto.nombre:
                         eventos_proximos.append({
-                            'id': f'proyecto_inicio_{proyecto.id}',
                             'titulo': f'Inicio: {proyecto.nombre}',
                             'fecha': proyecto.fecha_inicio,
-                            'tipo': 'proyecto',
-                            'color': '#28a745',
-                            'descripcion': f'Inicio del proyecto {proyecto.nombre}',
+                            'tipo': 'proyecto_inicio',
+                            'icono': 'fa-play-circle',
+                            'color': 'success',
+                            'descripcion': f'El proyecto "{proyecto.nombre}" inicia el {proyecto.fecha_inicio.strftime("%d/%m/%Y")}',
                             'dias_restantes': (proyecto.fecha_inicio - hoy).days
                         })
             except Exception as e:
@@ -342,12 +320,12 @@ def dashboard(request):
                 for proyecto in proyectos_fin_proximos:
                     if proyecto.fecha_fin and proyecto.nombre:
                         eventos_proximos.append({
-                            'id': f'proyecto_fin_{proyecto.id}',
                             'titulo': f'Finalización: {proyecto.nombre}',
                             'fecha': proyecto.fecha_fin,
                             'tipo': 'proyecto_fin',
-                            'color': '#dc3545',
-                            'descripcion': f'Finalización del proyecto {proyecto.nombre}',
+                            'icono': 'fa-flag-checkered',
+                            'color': 'warning',
+                            'descripcion': f'El proyecto "{proyecto.nombre}" finaliza el {proyecto.fecha_fin.strftime("%d/%m/%Y")}',
                             'dias_restantes': (proyecto.fecha_fin - hoy).days
                         })
             except Exception as e:
@@ -363,38 +341,32 @@ def dashboard(request):
                 for evento in eventos_calendario_proximos:
                     if evento.fecha_inicio:
                         eventos_proximos.append({
-                            'id': f'evento_{evento.id}',
-                            'titulo': evento.titulo or 'Sin título',
+                            'titulo': evento.titulo or 'Evento del Calendario',
                             'fecha': evento.fecha_inicio,
-                            'tipo': evento.tipo or 'otro',
-                            'color': evento.color or '#667eea',
-                            'descripcion': evento.descripcion or '',
+                            'tipo': evento.tipo or 'personalizado',
+                            'icono': 'fa-calendar-check',
+                            'color': 'info',
+                            'descripcion': evento.descripcion or f'Evento programado para el {evento.fecha_inicio.strftime("%d/%m/%Y")}',
                             'dias_restantes': (evento.fecha_inicio - hoy).days
                         })
             except Exception as e:
                 logger.warning(f"Error obteniendo eventos calendario próximos: {e}")
             
-            # Filtrar eventos con fecha válida y ordenar por fecha
+            # Ordenar eventos próximos por fecha
             try:
                 eventos_proximos_validos = [
                     e for e in eventos_proximos 
-                    if e.get('fecha') is not None and 'fecha' in e
+                    if e.get('fecha') is not None
                 ]
                 eventos_proximos_validos.sort(key=lambda x: x['fecha'])
-                eventos_proximos = eventos_proximos_validos[:10]  # Limitar a 10 eventos
+                eventos_proximos = eventos_proximos_validos[:6]  # Limitar a 6 eventos para mostrar
             except Exception as e:
                 logger.warning(f"Error ordenando eventos próximos: {e}")
-                # Mantener solo eventos válidos
-                eventos_proximos = [
-                    e for e in eventos_proximos 
-                    if isinstance(e, dict) and 'fecha' in e and e.get('fecha') is not None
-                ][:10]
+                eventos_proximos = [e for e in eventos_proximos if isinstance(e, dict) and 'fecha' in e][:6]
                 
         except Exception as e:
             logger.error(f"Error generando eventos próximos: {e}")
-            import traceback
-            traceback.print_exc()
-            eventos_proximos = []  # Lista vacía en caso de error
+            eventos_proximos = []
         
         # Inicializar variables para gráficos
         evolucion_proyectos = []
@@ -576,7 +548,7 @@ def dashboard(request):
             'gastos_categoria_mes': gastos_categoria_mes,
             'proyectos_rentables': proyectos_rentables,
             # ============================================================================
-            # EVENTOS PRÓXIMOS
+            # EVENTOS PRÓXIMOS PARA ACTIVIDAD RECIENTE
             # ============================================================================
             'eventos_proximos': eventos_proximos,
         }
@@ -588,12 +560,10 @@ def dashboard(request):
             if isinstance(value, Decimal):
                 logger.debug(f"Variable {key} es Decimal: {value}")
         
-        return render(request, 'core/dashboard.html', context)
+        return render(request, 'core/dashboard.html.broken', context)
         
     except Exception as e:
         logger.error(f"Error en dashboard: {str(e)}")
-        import traceback
-        traceback.print_exc()
         # Contexto de emergencia
         logger.warning("Usando contexto de emergencia para dashboard")
         context = {
@@ -616,7 +586,7 @@ def dashboard(request):
             'eventos_proximos': [],
         }
         
-        return render(request, 'core/dashboard.html', context)
+        return render(request, 'core/dashboard.html.broken', context)
 
 
 # ===== CRUD CLIENTES =====

@@ -844,42 +844,40 @@
             </div>
         </div>
 
-        <!-- Eventos Próximos -->
+        <!-- Actividad Reciente - Eventos Próximos -->
         <div class="col-xl-4 col-lg-5">
             <div class="timeline">
                 <div class="chart-header">
-                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Eventos Próximos</h5>
-                    <p class="text-muted mb-0">Próximos eventos en los siguientes 7 días</p>
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Actividad Reciente</h5>
+                    <p class="text-muted mb-0">Eventos próximos del calendario</p>
                 </div>
                 
                 {% if eventos_proximos %}
                     {% for evento in eventos_proximos %}
-                    <div class="timeline-item" onclick="if(window.calendar) window.calendar.gotoDate('{{ evento.fecha|date:"Y-m-d" }}')" style="cursor: pointer;">
-                        <div class="timeline-icon" style="background: {{ evento.color }};">
-                            {% if evento.tipo == 'vencimiento' %}
-                                <i class="fas fa-file-invoice"></i>
-                            {% elif evento.tipo == 'proyecto' %}
-                                <i class="fas fa-play-circle"></i>
-                            {% elif evento.tipo == 'proyecto_fin' %}
-                                <i class="fas fa-flag-checkered"></i>
-                            {% else %}
-                                <i class="fas fa-calendar-check"></i>
-                            {% endif %}
+                    {% if evento.fecha %}
+                    <div class="timeline-item" onclick="if(window.calendar) { window.calendar.gotoDate('{{ evento.fecha|date:"Y-m-d" }}'); }" style="cursor: pointer;">
+                        <div class="timeline-icon {{ evento.color|default:'info' }}">
+                            <i class="fas {{ evento.icono|default:'fa-calendar-check' }}"></i>
                         </div>
                         <div class="timeline-content">
-                            <h6>{{ evento.titulo }}</h6>
+                            <h6>{{ evento.titulo|default:'Evento' }}</h6>
                             <p>
-                                <i class="fas fa-calendar-alt me-1"></i>{{ evento.fecha|date:"d/m/Y" }}
-                                {% if evento.dias_restantes == 0 %}
-                                    <span class="badge bg-warning text-dark ms-2">Hoy</span>
-                                {% elif evento.dias_restantes == 1 %}
-                                    <span class="badge bg-danger ms-2">Mañana</span>
-                                {% else %}
-                                    <span class="badge bg-secondary ms-2">En {{ evento.dias_restantes }} días</span>
-                                {% endif %}
+                                {{ evento.descripcion|default:'' }}
+                                <br>
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar-alt me-1"></i>{{ evento.fecha|date:"d/m/Y" }}
+                                    {% if evento.dias_restantes == 0 %}
+                                        <span class="badge bg-warning text-dark ms-2">Hoy</span>
+                                    {% elif evento.dias_restantes == 1 %}
+                                        <span class="badge bg-danger ms-2">Mañana</span>
+                                    {% elif evento.dias_restantes %}
+                                        <span class="badge bg-secondary ms-2">En {{ evento.dias_restantes }} días</span>
+                                    {% endif %}
+                                </small>
                             </p>
                         </div>
                     </div>
+                    {% endif %}
                     {% endfor %}
                 {% else %}
                     <div class="text-center py-4">
@@ -887,6 +885,12 @@
                         <p class="text-muted">No hay eventos próximos en los próximos 7 días</p>
                     </div>
                 {% endif %}
+                
+                <div class="text-center mt-3">
+                    <a href="#calendar-section" class="btn btn-neostructure" onclick="if(window.calendar) { window.calendar.render(); return false; }">
+                        <i class="fas fa-calendar"></i> Ver Calendario Completo
+                    </a>
+                </div>
             </div>
         </div>
     </div>
