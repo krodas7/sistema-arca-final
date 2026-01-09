@@ -230,6 +230,11 @@
         border-color: #28a745 !important;
     }
     
+    .evento-proyecto-fin {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+    }
+    
     .evento-factura {
         background-color: #dc3545 !important;
         border-color: #dc3545 !important;
@@ -238,6 +243,97 @@
     .evento-personalizado {
         background-color: #007bff !important;
         border-color: #007bff !important;
+    }
+    
+    /* Lista de eventos próximos */
+    .eventos-proximos-container {
+        background: white;
+        border-radius: 20px;
+        padding: 2rem;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+    
+    .eventos-proximos-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e9ecef;
+    }
+    
+    .eventos-proximos-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .eventos-proximos-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .evento-proximo-item {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 1.25rem;
+        border-left: 4px solid;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+    }
+    
+    .evento-proximo-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .evento-proximo-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        flex-shrink: 0;
+    }
+    
+    .evento-proximo-info {
+        flex: 1;
+    }
+    
+    .evento-proximo-titulo {
+        font-weight: 600;
+        color: #2c3e50;
+        margin-bottom: 0.25rem;
+        font-size: 1rem;
+    }
+    
+    .evento-proximo-fecha {
+        color: #6c757d;
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .evento-proximo-dias {
+        background: rgba(0,0,0,0.05);
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #495057;
     }
     
     .toast {
@@ -400,6 +496,62 @@
             </div>
         </div>
     </div>
+
+    <!-- Eventos Próximos Section -->
+    {% if eventos_proximos %}
+    <div class="eventos-proximos-container">
+        <div class="eventos-proximos-header">
+            <h3 class="eventos-proximos-title">
+                <i class="fas fa-clock" style="color: #667eea;"></i>
+                Eventos Próximos
+            </h3>
+        </div>
+        <div class="eventos-proximos-list">
+            {% for evento in eventos_proximos %}
+            <div class="evento-proximo-item" style="border-left-color: {{ evento.color }};" onclick="window.calendar.gotoDate('{{ evento.fecha|date:"Y-m-d" }}')">
+                <div class="evento-proximo-icon" style="background: {{ evento.color }};">
+                    {% if evento.tipo == 'vencimiento' %}
+                        <i class="fas fa-file-invoice"></i>
+                    {% elif evento.tipo == 'proyecto' %}
+                        <i class="fas fa-play-circle"></i>
+                    {% elif evento.tipo == 'proyecto_fin' %}
+                        <i class="fas fa-flag-checkered"></i>
+                    {% else %}
+                        <i class="fas fa-calendar-check"></i>
+                    {% endif %}
+                </div>
+                <div class="evento-proximo-info">
+                    <div class="evento-proximo-titulo">{{ evento.titulo }}</div>
+                    <div class="evento-proximo-fecha">
+                        <i class="fas fa-calendar-alt"></i>
+                        {{ evento.fecha|date:"d/m/Y" }}
+                        {% if evento.dias_restantes == 0 %}
+                            <span class="evento-proximo-dias" style="background: #ffc107; color: #000;">Hoy</span>
+                        {% elif evento.dias_restantes == 1 %}
+                            <span class="evento-proximo-dias" style="background: #ff6b6b; color: white;">Mañana</span>
+                        {% else %}
+                            <span class="evento-proximo-dias">En {{ evento.dias_restantes }} días</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% else %}
+    <div class="eventos-proximos-container">
+        <div class="eventos-proximos-header">
+            <h3 class="eventos-proximos-title">
+                <i class="fas fa-clock" style="color: #667eea;"></i>
+                Eventos Próximos
+            </h3>
+        </div>
+        <div class="text-center py-4">
+            <i class="fas fa-calendar-times" style="font-size: 3rem; color: #dee2e6; margin-bottom: 1rem;"></i>
+            <p class="text-muted">No hay eventos próximos en los próximos 7 días</p>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Calendar Section -->
     <div class="calendar-container">

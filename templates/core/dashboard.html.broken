@@ -844,59 +844,49 @@
             </div>
         </div>
 
-        <!-- Actividad Reciente -->
+        <!-- Eventos Próximos -->
         <div class="col-xl-4 col-lg-5">
             <div class="timeline">
                 <div class="chart-header">
-                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Actividad Reciente</h5>
-                    <p class="text-muted mb-0">Últimas acciones del sistema</p>
+                    <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Eventos Próximos</h5>
+                    <p class="text-muted mb-0">Próximos eventos en los siguientes 7 días</p>
                 </div>
                 
-                <div class="timeline-item">
-                    <div class="timeline-icon primary">
-                        <i class="fas fa-plus"></i>
+                {% if eventos_proximos %}
+                    {% for evento in eventos_proximos %}
+                    <div class="timeline-item" onclick="if(window.calendar) window.calendar.gotoDate('{{ evento.fecha|date:"Y-m-d" }}')" style="cursor: pointer;">
+                        <div class="timeline-icon" style="background: {{ evento.color }};">
+                            {% if evento.tipo == 'vencimiento' %}
+                                <i class="fas fa-file-invoice"></i>
+                            {% elif evento.tipo == 'proyecto' %}
+                                <i class="fas fa-play-circle"></i>
+                            {% elif evento.tipo == 'proyecto_fin' %}
+                                <i class="fas fa-flag-checkered"></i>
+                            {% else %}
+                                <i class="fas fa-calendar-check"></i>
+                            {% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <h6>{{ evento.titulo }}</h6>
+                            <p>
+                                <i class="fas fa-calendar-alt me-1"></i>{{ evento.fecha|date:"d/m/Y" }}
+                                {% if evento.dias_restantes == 0 %}
+                                    <span class="badge bg-warning text-dark ms-2">Hoy</span>
+                                {% elif evento.dias_restantes == 1 %}
+                                    <span class="badge bg-danger ms-2">Mañana</span>
+                                {% else %}
+                                    <span class="badge bg-secondary ms-2">En {{ evento.dias_restantes }} días</span>
+                                {% endif %}
+                            </p>
+                        </div>
                     </div>
-                    <div class="timeline-content">
-                        <h6>Nuevo Proyecto Creado</h6>
-                        <p>Proyecto "Edificio Residencial Centro" agregado al sistema</p>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times" style="font-size: 3rem; color: #dee2e6; margin-bottom: 1rem;"></i>
+                        <p class="text-muted">No hay eventos próximos en los próximos 7 días</p>
                     </div>
-                </div>
-                
-                <div class="timeline-item">
-                    <div class="timeline-icon success">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h6>Factura Pagada</h6>
-                        <p>Factura #F-001-2024 marcada como pagada</p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item">
-                    <div class="timeline-icon warning">
-                        <i class="fas fa-exclamation-triangle"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h6>Stock Bajo</h6>
-                        <p>Material "Cemento Portland" requiere reabastecimiento</p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item">
-                    <div class="timeline-icon info">
-                        <i class="fas fa-user-plus"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h6>Nuevo Colaborador</h6>
-                        <p>Juan Pérez agregado al proyecto "Edificio Residencial"</p>
-                    </div>
-                </div>
-                
-                <div class="text-center mt-3">
-                    <a href="#" class="btn btn-neostructure">
-                        <i class="fas fa-eye"></i> Ver Todas las Actividades
-                    </a>
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
