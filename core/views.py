@@ -233,11 +233,14 @@ def dashboard(request):
                 }
             })
         
-        # Eventos de proyectos
-        proyectos = Proyecto.objects.filter(fecha_inicio__isnull=False)[:5]
-        for proyecto in proyectos:
+        # Eventos de proyectos - Inicio
+        proyectos_inicio = Proyecto.objects.filter(
+            fecha_inicio__isnull=False,
+            activo=True
+        )[:10]
+        for proyecto in proyectos_inicio:
             eventos_calendario.append({
-                'id': f'proyecto_{proyecto.id}',
+                'id': f'proyecto_inicio_{proyecto.id}',
                 'title': f'Inicio: {proyecto.nombre}',
                 'start': proyecto.fecha_inicio.isoformat(),
                 'end': proyecto.fecha_inicio.isoformat(),
@@ -247,7 +250,30 @@ def dashboard(request):
                 'extendedProps': {
                     'tipo': 'proyecto',
                     'descripcion': f'Inicio del proyecto {proyecto.nombre}',
-                    'todo_el_dia': True
+                    'todo_el_dia': True,
+                    'proyecto_id': proyecto.id
+                }
+            })
+        
+        # Eventos de proyectos - Finalización
+        proyectos_fin = Proyecto.objects.filter(
+            fecha_fin__isnull=False,
+            activo=True
+        )[:10]
+        for proyecto in proyectos_fin:
+            eventos_calendario.append({
+                'id': f'proyecto_fin_{proyecto.id}',
+                'title': f'Finalización: {proyecto.nombre}',
+                'start': proyecto.fecha_fin.isoformat(),
+                'end': proyecto.fecha_fin.isoformat(),
+                'className': 'evento-proyecto-fin',
+                'backgroundColor': '#dc3545',
+                'borderColor': '#dc3545',
+                'extendedProps': {
+                    'tipo': 'proyecto_fin',
+                    'descripcion': f'Finalización del proyecto {proyecto.nombre}',
+                    'todo_el_dia': True,
+                    'proyecto_id': proyecto.id
                 }
             })
         

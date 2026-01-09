@@ -317,6 +317,39 @@
         box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4) !important;
     }
     
+    /* Estilos para eventos del calendario */
+    .fc-event {
+        border-radius: 8px;
+        border: none;
+        padding: 2px 6px;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+    
+    .fc-event-title {
+        font-weight: 600;
+    }
+    
+    .evento-proyecto {
+        background-color: #28a745 !important;
+        border-color: #28a745 !important;
+    }
+    
+    .evento-proyecto-fin {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+    }
+    
+    .evento-factura {
+        background-color: #dc3545 !important;
+        border-color: #dc3545 !important;
+    }
+    
+    .evento-personalizado {
+        background-color: #007bff !important;
+        border-color: #007bff !important;
+    }
+    
     /* Estilos para gráficos compactos */
     .chart-compact {
         padding: 1rem;
@@ -1580,6 +1613,21 @@
                     
                     console.log('✅ FullCalendar disponible, creando calendario...');
                     
+                    // Obtener eventos del contexto
+                    let eventosCalendario = [];
+                    try {
+                        const eventosJson = '{{ eventos_calendario_json|escapejs }}';
+                        console.log('📅 JSON de eventos:', eventosJson.substring(0, 200) + '...');
+                        eventosCalendario = JSON.parse(eventosJson);
+                        console.log('✅ Eventos parseados:', eventosCalendario.length, 'eventos');
+                        if (eventosCalendario.length > 0) {
+                            console.log('📋 Primer evento:', eventosCalendario[0]);
+                        }
+                    } catch (error) {
+                        console.error('❌ Error parseando eventos del calendario:', error);
+                        eventosCalendario = [];
+                    }
+                    
                     const calendar = new FullCalendar.Calendar(calendarEl, {
                         initialView: 'dayGridMonth',
                         locale: 'es',
@@ -1588,7 +1636,7 @@
                             center: 'title',
                             right: 'dayGridMonth,timeGridWeek,timeGridDay'
                         },
-                        events: {{ eventos_calendario_json|safe }},
+                        events: eventosCalendario,
                         eventColor: '#667eea',
                         height: 'auto',
                         // Configuración para múltiples eventos
