@@ -508,8 +508,9 @@
         </div>
         <div class="eventos-proximos-list">
             {% for evento in eventos_proximos %}
-            <div class="evento-proximo-item" style="border-left-color: {{ evento.color }};" onclick="window.calendar.gotoDate('{{ evento.fecha|date:"Y-m-d" }}')">
-                <div class="evento-proximo-icon" style="background: {{ evento.color }};">
+            {% if evento.fecha %}
+            <div class="evento-proximo-item" style="border-left-color: {{ evento.color|default:'#667eea' }};" onclick="if(window.calendar) { window.calendar.gotoDate('{{ evento.fecha|date:"Y-m-d" }}'); } else { console.log('Calendario no inicializado'); }">
+                <div class="evento-proximo-icon" style="background: {{ evento.color|default:'#667eea' }};">
                     {% if evento.tipo == 'vencimiento' %}
                         <i class="fas fa-file-invoice"></i>
                     {% elif evento.tipo == 'proyecto' %}
@@ -521,7 +522,7 @@
                     {% endif %}
                 </div>
                 <div class="evento-proximo-info">
-                    <div class="evento-proximo-titulo">{{ evento.titulo }}</div>
+                    <div class="evento-proximo-titulo">{{ evento.titulo|default:'Sin título' }}</div>
                     <div class="evento-proximo-fecha">
                         <i class="fas fa-calendar-alt"></i>
                         {{ evento.fecha|date:"d/m/Y" }}
@@ -529,12 +530,13 @@
                             <span class="evento-proximo-dias" style="background: #ffc107; color: #000;">Hoy</span>
                         {% elif evento.dias_restantes == 1 %}
                             <span class="evento-proximo-dias" style="background: #ff6b6b; color: white;">Mañana</span>
-                        {% else %}
+                        {% elif evento.dias_restantes %}
                             <span class="evento-proximo-dias">En {{ evento.dias_restantes }} días</span>
                         {% endif %}
                     </div>
                 </div>
             </div>
+            {% endif %}
             {% endfor %}
         </div>
     </div>

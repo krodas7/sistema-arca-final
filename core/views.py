@@ -279,87 +279,122 @@ def dashboard(request):
         # ============================================================================
         # EVENTOS PRÓXIMOS PARA EL DASHBOARD
         # ============================================================================
-        from datetime import timedelta
-        hoy = timezone.now().date()
-        mañana = hoy + timedelta(days=1)
-        proximos_7_dias = hoy + timedelta(days=7)
-        
-        # Obtener todos los eventos próximos (próximos 7 días)
+        # Inicializar eventos_proximos siempre como lista vacía por defecto
         eventos_proximos = []
         
-        # Eventos de facturas próximas
-        facturas_proximas = Factura.objects.filter(
-            fecha_vencimiento__gte=hoy,
-            fecha_vencimiento__lte=proximos_7_dias,
-            fecha_vencimiento__isnull=False
-        ).order_by('fecha_vencimiento')[:5]
-        for factura in facturas_proximas:
-            eventos_proximos.append({
-                'id': f'factura_{factura.id}',
-                'titulo': f'Vencimiento: {factura.numero_factura}',
-                'fecha': factura.fecha_vencimiento,
-                'tipo': 'vencimiento',
-                'color': '#dc3545',
-                'descripcion': f'Vencimiento de factura {factura.numero_factura}',
-                'dias_restantes': (factura.fecha_vencimiento - hoy).days
-            })
-        
-        # Eventos de proyectos - Inicio próximo
-        proyectos_inicio_proximos = Proyecto.objects.filter(
-            fecha_inicio__gte=hoy,
-            fecha_inicio__lte=proximos_7_dias,
-            fecha_inicio__isnull=False,
-            activo=True
-        ).order_by('fecha_inicio')[:5]
-        for proyecto in proyectos_inicio_proximos:
-            eventos_proximos.append({
-                'id': f'proyecto_inicio_{proyecto.id}',
-                'titulo': f'Inicio: {proyecto.nombre}',
-                'fecha': proyecto.fecha_inicio,
-                'tipo': 'proyecto',
-                'color': '#28a745',
-                'descripcion': f'Inicio del proyecto {proyecto.nombre}',
-                'dias_restantes': (proyecto.fecha_inicio - hoy).days
-            })
-        
-        # Eventos de proyectos - Finalización próxima
-        proyectos_fin_proximos = Proyecto.objects.filter(
-            fecha_fin__gte=hoy,
-            fecha_fin__lte=proximos_7_dias,
-            fecha_fin__isnull=False,
-            activo=True
-        ).order_by('fecha_fin')[:5]
-        for proyecto in proyectos_fin_proximos:
-            eventos_proximos.append({
-                'id': f'proyecto_fin_{proyecto.id}',
-                'titulo': f'Finalización: {proyecto.nombre}',
-                'fecha': proyecto.fecha_fin,
-                'tipo': 'proyecto_fin',
-                'color': '#dc3545',
-                'descripcion': f'Finalización del proyecto {proyecto.nombre}',
-                'dias_restantes': (proyecto.fecha_fin - hoy).days
-            })
-        
-        # Eventos del calendario personalizados próximos
-        eventos_calendario_proximos = EventoCalendario.objects.filter(
-            creado_por=request.user,
-            fecha_inicio__gte=hoy,
-            fecha_inicio__lte=proximos_7_dias
-        ).order_by('fecha_inicio')[:5]
-        for evento in eventos_calendario_proximos:
-            eventos_proximos.append({
-                'id': f'evento_{evento.id}',
-                'titulo': evento.titulo,
-                'fecha': evento.fecha_inicio,
-                'tipo': evento.tipo,
-                'color': evento.color,
-                'descripcion': evento.descripcion or '',
-                'dias_restantes': (evento.fecha_inicio - hoy).days
-            })
-        
-        # Ordenar eventos próximos por fecha
-        eventos_proximos.sort(key=lambda x: x['fecha'])
-        eventos_proximos = eventos_proximos[:10]  # Limitar a 10 eventos
+        try:
+            from datetime import timedelta
+            hoy = timezone.now().date()
+            mañana = hoy + timedelta(days=1)
+            proximos_7_dias = hoy + timedelta(days=7)
+            
+            # Eventos de facturas próximas
+            try:
+                facturas_proximas = Factura.objects.filter(
+                    fecha_vencimiento__gte=hoy,
+                    fecha_vencimiento__lte=proximos_7_dias,
+                    fecha_vencimiento__isnull=False
+                ).order_by('fecha_vencimiento')[:5]
+                for factura in facturas_proximas:
+                    if factura.fecha_vencimiento and factura.numero_factura:
+                        eventos_proximos.append({
+                            'id': f'factura_{factura.id}',
+                            'titulo': f'Vencimiento: {factura.numero_factura}',
+                            'fecha': factura.fecha_vencimiento,
+                            'tipo': 'vencimiento',
+                            'color': '#dc3545',
+                            'descripcion': f'Vencimiento de factura {factura.numero_factura}',
+                            'dias_restantes': (factura.fecha_vencimiento - hoy).days
+                        })
+            except Exception as e:
+                logger.warning(f"Error obteniendo facturas próximas: {e}")
+            
+            # Eventos de proyectos - Inicio próximo
+            try:
+                proyectos_inicio_proximos = Proyecto.objects.filter(
+                    fecha_inicio__gte=hoy,
+                    fecha_inicio__lte=proximos_7_dias,
+                    fecha_inicio__isnull=False,
+                    activo=True
+                ).order_by('fecha_inicio')[:5]
+                for proyecto in proyectos_inicio_proximos:
+                    if proyecto.fecha_inicio and proyecto.nombre:
+                        eventos_proximos.append({
+                            'id': f'proyecto_inicio_{proyecto.id}',
+                            'titulo': f'Inicio: {proyecto.nombre}',
+                            'fecha': proyecto.fecha_inicio,
+                            'tipo': 'proyecto',
+                            'color': '#28a745',
+                            'descripcion': f'Inicio del proyecto {proyecto.nombre}',
+                            'dias_restantes': (proyecto.fecha_inicio - hoy).days
+                        })
+            except Exception as e:
+                logger.warning(f"Error obteniendo proyectos inicio próximos: {e}")
+            
+            # Eventos de proyectos - Finalización próxima
+            try:
+                proyectos_fin_proximos = Proyecto.objects.filter(
+                    fecha_fin__gte=hoy,
+                    fecha_fin__lte=proximos_7_dias,
+                    fecha_fin__isnull=False,
+                    activo=True
+                ).order_by('fecha_fin')[:5]
+                for proyecto in proyectos_fin_proximos:
+                    if proyecto.fecha_fin and proyecto.nombre:
+                        eventos_proximos.append({
+                            'id': f'proyecto_fin_{proyecto.id}',
+                            'titulo': f'Finalización: {proyecto.nombre}',
+                            'fecha': proyecto.fecha_fin,
+                            'tipo': 'proyecto_fin',
+                            'color': '#dc3545',
+                            'descripcion': f'Finalización del proyecto {proyecto.nombre}',
+                            'dias_restantes': (proyecto.fecha_fin - hoy).days
+                        })
+            except Exception as e:
+                logger.warning(f"Error obteniendo proyectos fin próximos: {e}")
+            
+            # Eventos del calendario personalizados próximos
+            try:
+                eventos_calendario_proximos = EventoCalendario.objects.filter(
+                    creado_por=request.user,
+                    fecha_inicio__gte=hoy,
+                    fecha_inicio__lte=proximos_7_dias
+                ).order_by('fecha_inicio')[:5]
+                for evento in eventos_calendario_proximos:
+                    if evento.fecha_inicio:
+                        eventos_proximos.append({
+                            'id': f'evento_{evento.id}',
+                            'titulo': evento.titulo or 'Sin título',
+                            'fecha': evento.fecha_inicio,
+                            'tipo': evento.tipo or 'otro',
+                            'color': evento.color or '#667eea',
+                            'descripcion': evento.descripcion or '',
+                            'dias_restantes': (evento.fecha_inicio - hoy).days
+                        })
+            except Exception as e:
+                logger.warning(f"Error obteniendo eventos calendario próximos: {e}")
+            
+            # Filtrar eventos con fecha válida y ordenar por fecha
+            try:
+                eventos_proximos_validos = [
+                    e for e in eventos_proximos 
+                    if e.get('fecha') is not None and 'fecha' in e
+                ]
+                eventos_proximos_validos.sort(key=lambda x: x['fecha'])
+                eventos_proximos = eventos_proximos_validos[:10]  # Limitar a 10 eventos
+            except Exception as e:
+                logger.warning(f"Error ordenando eventos próximos: {e}")
+                # Mantener solo eventos válidos
+                eventos_proximos = [
+                    e for e in eventos_proximos 
+                    if isinstance(e, dict) and 'fecha' in e and e.get('fecha') is not None
+                ][:10]
+                
+        except Exception as e:
+            logger.error(f"Error generando eventos próximos: {e}")
+            import traceback
+            traceback.print_exc()
+            eventos_proximos = []  # Lista vacía en caso de error
         
         # Inicializar variables para gráficos
         evolucion_proyectos = []
