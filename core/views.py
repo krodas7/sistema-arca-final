@@ -553,10 +553,12 @@ def dashboard(request):
             if isinstance(value, Decimal):
                 logger.debug(f"Variable {key} es Decimal: {value}")
         
-        return render(request, 'core/dashboard.html.broken', context)
+        return render(request, 'core/dashboard.html', context)
         
     except Exception as e:
         logger.error(f"Error en dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
         # Contexto de emergencia
         logger.warning("Usando contexto de emergencia para dashboard")
         context = {
@@ -576,9 +578,10 @@ def dashboard(request):
             'ingresos_mensuales': [],
             'gastos_mensuales': [],
             'meses_grafico': [],
+            'eventos_proximos': [],
         }
         
-        return render(request, 'core/dashboard.html.broken', context)
+        return render(request, 'core/dashboard.html', context)
 
 
 # ===== CRUD CLIENTES =====
