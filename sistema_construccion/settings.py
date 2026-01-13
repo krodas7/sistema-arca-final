@@ -37,7 +37,7 @@ if not DEBUG:
     # En producción, incluir tanto www como no-www
     DEFAULT_HOSTS = 'construccionesarca.net,www.construccionesarca.net'
 
-ALLOWED_HOSTS = ['198.199.123.120', '159.203.106.69', 'construccionesarca.net', 'www.construccionesarca.net', 'localhost', '127.0.0.1', '192.168.0.150']
+ALLOWED_HOSTS = ['198.199.123.120', '159.203.106.69', 'construccionesarca.net', 'www.construccionesarca.net', 'instruccionesarca.net', 'www.instruccionesarca.net', 'localhost', '127.0.0.1', '192.168.0.150']
 
 # Configuración para redirección de www
 USE_WWW_REDIRECT = os.environ.get('USE_WWW_REDIRECT', 'False').lower() == 'true'
@@ -166,6 +166,29 @@ LOGOUT_REDIRECT_URL = '/login/'
 # Configuración de sesiones
 SESSION_COOKIE_AGE = 3600  # 1 hora
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+SESSION_COOKIE_SAMESITE = 'Lax'  # Permite cookies en móviles y PWA
+SESSION_COOKIE_HTTPONLY = True
+
+# Configuración de CSRF para móviles y PWA
+CSRF_TRUSTED_ORIGINS = [
+    'https://construccionesarca.net',
+    'https://www.construccionesarca.net',
+    'https://instruccionesarca.net',
+    'https://www.instruccionesarca.net',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'http://localhost:8006',
+    'http://127.0.0.1:8006',
+]
+
+# Configuración de cookies CSRF para móviles
+CSRF_COOKIE_SAMESITE = 'Lax'  # Permite cookies en móviles y PWA
+CSRF_COOKIE_HTTPONLY = False  # Necesario para que JavaScript pueda leer el token
+CSRF_USE_SESSIONS = False  # Usar cookies en lugar de sesiones para CSRF
+
+# Si estás en producción con HTTPS, descomenta estas líneas:
+# CSRF_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
 
 # Configuración de Email para Notificaciones
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
