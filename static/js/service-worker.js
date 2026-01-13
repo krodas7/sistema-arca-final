@@ -244,7 +244,16 @@ self.addEventListener('message', (event) => {
     
     switch (action) {
         case 'SKIP_WAITING':
-            self.skipWaiting();
+            console.log('🔄 Service Worker: Recibido SKIP_WAITING, activando nueva versión...');
+            self.skipWaiting().then(() => {
+                console.log('✅ Service Worker: skipWaiting completado');
+                // Notificar a todos los clientes que se actualizó
+                self.clients.matchAll().then(clients => {
+                    clients.forEach(client => {
+                        client.postMessage({ action: 'SW_UPDATED' });
+                    });
+                });
+            });
             break;
             
         case 'CLEAR_CACHE':

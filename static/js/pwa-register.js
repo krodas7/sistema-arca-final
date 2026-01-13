@@ -31,6 +31,14 @@ class PWARegister {
                 console.log('⏳ Service Worker esperando activación');
                 this.handleUpdate();
             }
+            
+            // Escuchar mensajes del Service Worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.action === 'SW_UPDATED') {
+                    console.log('✅ Service Worker actualizado, recargando página...');
+                    this.reloadPage();
+                }
+            });
 
             this.isRegistered = true;
             return true;
@@ -120,10 +128,73 @@ class PWARegister {
     }
 
     // Actualizar la aplicación
-    updateApp() {
-        if (this.registration && this.registration.waiting) {
+    async updateApp() {
+        console.log('🔄 Iniciando actualización de la aplicación...');
+        
+        if (!this.registration) {
+            console.error('❌ No hay registro de Service Worker');
+            alert('Error: No se pudo actualizar. Por favor, recarga la página manualmente.');
+            return;
+        }
+
+        // Si hay un service worker esperando
+        if (this.registration.waiting) {
+            console.log('📤 Enviando mensaje SKIP_WAITING al Service Worker...');
+            
             // Enviar mensaje al Service Worker para activar la nueva versión
             this.registration.waiting.postMessage({ action: 'SKIP_WAITING' });
+            
+            // Escuchar cuando el nuevo worker se active
+            this.registration.waiting.addEventListener('statechange', () => {
+                if (this.registration.waiting.state === 'activated') {
+                    console.log('✅ Nueva versión activada, recargando página...');
+                    this.reloadPage();
+                }
+            });
+            
+            // También verificar periódicamente si el worker se activó
+            const checkInterval = setInterval(() => {
+                if (this.registration.waiting && this.registration.waiting.state === 'activated') {
+                    clearInterval(checkInterval);
+                    console.log('✅ Service Worker activado, recargando...');
+                    this.reloadPage();
+                } else if (!this.registration.waiting) {
+                    // El worker ya se activó y ya no está en waiting
+                    clearInterval(checkInterval);
+                    console.log('✅ Service Worker actualizado, recargando...');
+                    this.reloadPage();
+                }
+            }, 100);
+            
+            // Timeout de seguridad: recargar después de 2 segundos si no se activó
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                console.log('⏰ Timeout: Recargando página de todas formas...');
+                this.reloadPage();
+            }, 2000);
+            
+        } else {
+            // No hay worker esperando, intentar actualizar manualmente
+            console.log('🔄 No hay worker esperando, intentando actualizar manualmente...');
+            try {
+                await this.registration.update();
+                
+                // Esperar un momento y recargar
+                setTimeout(() => {
+                    console.log('🔄 Recargando página después de actualización...');
+                    this.reloadPage();
+                }, 1000);
+            } catch (error) {
+                console.error('❌ Error actualizando:', error);
+                // Recargar de todas formas
+                this.reloadPage();
+            }
+        }
+        
+        // Ocultar el modal de actualización
+        const notification = document.getElementById('pwa-update-notification');
+        if (notification) {
+            notification.remove();
         }
     }
 
