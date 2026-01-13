@@ -277,8 +277,8 @@ def dashboard(request):
                 }
             })
         
-        # Eventos del calendario personalizados
-        eventos_personalizados = EventoCalendario.objects.filter(creado_por=request.user)
+        # Eventos del calendario personalizados - VISIBLES PARA TODOS EN EL CALENDARIO
+        eventos_personalizados = EventoCalendario.objects.all()  # Todos los eventos, no solo del usuario actual
         for evento in eventos_personalizados:
             eventos_calendario.append(evento.to_calendar_event())
         
@@ -376,15 +376,14 @@ def dashboard(request):
                 import traceback
                 traceback.print_exc()
             
-            # Eventos del calendario personalizados próximos - SOLO DEL USUARIO ACTUAL
+            # Eventos del calendario personalizados próximos - VISIBLES PARA TODOS
             try:
                 eventos_calendario_proximos = EventoCalendario.objects.filter(
-                    creado_por=request.user,
                     fecha_inicio__gte=hoy,
                     fecha_inicio__lte=proximos_7_dias
-                ).order_by('fecha_inicio')[:5]
+                ).order_by('fecha_inicio')[:10]  # Aumentar a 10 para tener más opciones
                 
-                logger.info(f"📋 Eventos próximos - Eventos personalizados encontrados para {request.user.username}: {eventos_calendario_proximos.count()}")
+                logger.info(f"📋 Eventos próximos - Eventos del calendario encontrados (todos los usuarios): {eventos_calendario_proximos.count()}")
                 
                 for evento in eventos_calendario_proximos:
                     if evento.fecha_inicio:
