@@ -285,6 +285,8 @@ def dashboard(request):
         # ============================================================================
         # EVENTOS PRÓXIMOS PARA LA SECCIÓN "ACTIVIDAD RECIENTE"
         # ============================================================================
+        # IMPORTANTE: Estos eventos son visibles para TODOS los usuarios
+        # Solo los eventos personalizados del calendario están filtrados por usuario
         eventos_proximos = []
         
         try:
@@ -292,13 +294,16 @@ def dashboard(request):
             hoy = timezone.now().date()
             proximos_7_dias = hoy + timedelta(days=7)
             
-            # Eventos de facturas próximas (vencimientos)
+            # Eventos de facturas próximas (vencimientos) - VISIBLES PARA TODOS
             try:
                 facturas_proximas = Factura.objects.filter(
                     fecha_vencimiento__gte=hoy,
                     fecha_vencimiento__lte=proximos_7_dias,
                     fecha_vencimiento__isnull=False
                 ).order_by('fecha_vencimiento')[:5]
+                
+                logger.debug(f"Eventos próximos - Facturas encontradas: {facturas_proximas.count()}")
+                
                 for factura in facturas_proximas:
                     if factura.fecha_vencimiento and factura.numero_factura:
                         eventos_proximos.append({
@@ -311,9 +316,11 @@ def dashboard(request):
                             'dias_restantes': (factura.fecha_vencimiento - hoy).days
                         })
             except Exception as e:
-                logger.warning(f"Error obteniendo facturas próximas: {e}")
+                logger.error(f"Error obteniendo facturas próximas: {e}")
+                import traceback
+                traceback.print_exc()
             
-            # Eventos de proyectos - Inicio próximo
+            # Eventos de proyectos - Inicio próximo - VISIBLES PARA TODOS
             try:
                 proyectos_inicio_proximos = Proyecto.objects.filter(
                     fecha_inicio__gte=hoy,
@@ -321,6 +328,9 @@ def dashboard(request):
                     fecha_inicio__isnull=False,
                     activo=True
                 ).order_by('fecha_inicio')[:5]
+                
+                logger.debug(f"Eventos próximos - Proyectos inicio encontrados: {proyectos_inicio_proximos.count()}")
+                
                 for proyecto in proyectos_inicio_proximos:
                     if proyecto.fecha_inicio and proyecto.nombre:
                         eventos_proximos.append({
@@ -333,9 +343,11 @@ def dashboard(request):
                             'dias_restantes': (proyecto.fecha_inicio - hoy).days
                         })
             except Exception as e:
-                logger.warning(f"Error obteniendo proyectos inicio próximos: {e}")
+                logger.error(f"Error obteniendo proyectos inicio próximos: {e}")
+                import traceback
+                traceback.print_exc()
             
-            # Eventos de proyectos - Finalización próxima
+            # Eventos de proyectos - Finalización próxima - VISIBLES PARA TODOS
             try:
                 proyectos_fin_proximos = Proyecto.objects.filter(
                     fecha_fin__gte=hoy,
@@ -343,6 +355,9 @@ def dashboard(request):
                     fecha_fin__isnull=False,
                     activo=True
                 ).order_by('fecha_fin')[:5]
+                
+                logger.debug(f"Eventos próximos - Proyectos fin encontrados: {proyectos_fin_proximos.count()}")
+                
                 for proyecto in proyectos_fin_proximos:
                     if proyecto.fecha_fin and proyecto.nombre:
                         eventos_proximos.append({
@@ -355,7 +370,9 @@ def dashboard(request):
                             'dias_restantes': (proyecto.fecha_fin - hoy).days
                         })
             except Exception as e:
-                logger.warning(f"Error obteniendo proyectos fin próximos: {e}")
+                logger.error(f"Error obteniendo proyectos fin próximos: {e}")
+                import traceback
+                traceback.print_exc()
             
             # Eventos del calendario personalizados próximos
             try:
@@ -386,12 +403,18 @@ def dashboard(request):
                 ]
                 eventos_proximos_validos.sort(key=lambda x: x['fecha'])
                 eventos_proximos = eventos_proximos_validos[:6]  # Limitar a 6 eventos para mostrar
+                
+                logger.debug(f"Eventos próximos totales generados: {len(eventos_proximos)} para usuario {request.user.username}")
             except Exception as e:
-                logger.warning(f"Error ordenando eventos próximos: {e}")
+                logger.error(f"Error ordenando eventos próximos: {e}")
+                import traceback
+                traceback.print_exc()
                 eventos_proximos = [e for e in eventos_proximos if isinstance(e, dict) and 'fecha' in e][:6]
                 
         except Exception as e:
             logger.error(f"Error generando eventos próximos: {e}")
+            import traceback
+            traceback.print_exc()
             eventos_proximos = []
         
         # Inicializar variables para gráficos
