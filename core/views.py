@@ -294,6 +294,8 @@ def dashboard(request):
             hoy = timezone.now().date()
             proximos_7_dias = hoy + timedelta(days=7)
             
+            logger.info(f"🔍 Generando eventos próximos para usuario {request.user.username} - Rango: {hoy} a {proximos_7_dias}")
+            
             # Eventos de facturas próximas (vencimientos) - VISIBLES PARA TODOS
             try:
                 facturas_proximas = Factura.objects.filter(
@@ -302,7 +304,7 @@ def dashboard(request):
                     fecha_vencimiento__isnull=False
                 ).order_by('fecha_vencimiento')[:5]
                 
-                logger.debug(f"Eventos próximos - Facturas encontradas: {facturas_proximas.count()}")
+                logger.info(f"📋 Eventos próximos - Facturas encontradas: {facturas_proximas.count()}")
                 
                 for factura in facturas_proximas:
                     if factura.fecha_vencimiento and factura.numero_factura:
@@ -329,7 +331,7 @@ def dashboard(request):
                     activo=True
                 ).order_by('fecha_inicio')[:5]
                 
-                logger.debug(f"Eventos próximos - Proyectos inicio encontrados: {proyectos_inicio_proximos.count()}")
+                logger.info(f"📋 Eventos próximos - Proyectos inicio encontrados: {proyectos_inicio_proximos.count()}")
                 
                 for proyecto in proyectos_inicio_proximos:
                     if proyecto.fecha_inicio and proyecto.nombre:
@@ -356,7 +358,7 @@ def dashboard(request):
                     activo=True
                 ).order_by('fecha_fin')[:5]
                 
-                logger.debug(f"Eventos próximos - Proyectos fin encontrados: {proyectos_fin_proximos.count()}")
+                logger.info(f"📋 Eventos próximos - Proyectos fin encontrados: {proyectos_fin_proximos.count()}")
                 
                 for proyecto in proyectos_fin_proximos:
                     if proyecto.fecha_fin and proyecto.nombre:
@@ -374,13 +376,16 @@ def dashboard(request):
                 import traceback
                 traceback.print_exc()
             
-            # Eventos del calendario personalizados próximos
+            # Eventos del calendario personalizados próximos - SOLO DEL USUARIO ACTUAL
             try:
                 eventos_calendario_proximos = EventoCalendario.objects.filter(
                     creado_por=request.user,
                     fecha_inicio__gte=hoy,
                     fecha_inicio__lte=proximos_7_dias
                 ).order_by('fecha_inicio')[:5]
+                
+                logger.info(f"📋 Eventos próximos - Eventos personalizados encontrados para {request.user.username}: {eventos_calendario_proximos.count()}")
+                
                 for evento in eventos_calendario_proximos:
                     if evento.fecha_inicio:
                         eventos_proximos.append({
@@ -393,7 +398,9 @@ def dashboard(request):
                             'dias_restantes': (evento.fecha_inicio - hoy).days
                         })
             except Exception as e:
-                logger.warning(f"Error obteniendo eventos calendario próximos: {e}")
+                logger.error(f"❌ Error obteniendo eventos calendario próximos: {e}")
+                import traceback
+                traceback.print_exc()
             
             # Ordenar eventos próximos por fecha
             try:
@@ -404,18 +411,27 @@ def dashboard(request):
                 eventos_proximos_validos.sort(key=lambda x: x['fecha'])
                 eventos_proximos = eventos_proximos_validos[:6]  # Limitar a 6 eventos para mostrar
                 
-                logger.debug(f"Eventos próximos totales generados: {len(eventos_proximos)} para usuario {request.user.username}")
+                logger.info(f"✅ Eventos próximos totales generados: {len(eventos_proximos)} para usuario {request.user.username}")
+                if len(eventos_proximos) > 0:
+                    logger.info(f"📋 Primer evento: {eventos_proximos[0].get('titulo', 'Sin título')}")
             except Exception as e:
-                logger.error(f"Error ordenando eventos próximos: {e}")
+                logger.error(f"❌ Error ordenando eventos próximos: {e}")
                 import traceback
                 traceback.print_exc()
                 eventos_proximos = [e for e in eventos_proximos if isinstance(e, dict) and 'fecha' in e][:6]
                 
         except Exception as e:
-            logger.error(f"Error generando eventos próximos: {e}")
+            logger.error(f"❌ Error generando eventos próximos: {e}")
             import traceback
             traceback.print_exc()
+            eventos_proximos = []  # Lista vacía en caso de error
+        
+        # Asegurar que eventos_proximos siempre sea una lista
+        if not isinstance(eventos_proximos, list):
+            logger.warning(f"⚠️ eventos_proximos no es una lista, corrigiendo...")
             eventos_proximos = []
+        
+        logger.info(f"📊 Eventos próximos finales para {request.user.username}: {len(eventos_proximos)} eventos")
         
         # Inicializar variables para gráficos
         evolucion_proyectos = []
@@ -603,7 +619,19 @@ def dashboard(request):
         }
         
         # Log información del contexto para debugging
-        logger.debug(f"Contexto dashboard generado con {len(context)} variables")
+        logger.info(f"📊 Contexto dashboard generado con {len(context)} variables para usuario {request.user.username}")
+        logger.info(f"📅 Eventos próximos en contexto: {len(context.get('eventos_proximos', []))} eventos")
+        
+        # Verificar que eventos_proximos esté en el contexto
+        if 'eventos_proximos' not in context:
+            logger.error(f"❌ eventos_proximos NO está en el contexto para usuario {request.user.username}")
+            context['eventos_proximos'] = []
+        elif not isinstance(context['eventos_proximos'], list):
+            logger.error(f"❌ eventos_proximos no es una lista para usuario {request.user.username}, tipo: {type(context['eventos_proximos'])}")
+            context['eventos_proximos'] = []
+        else:
+            logger.info(f"✅ eventos_proximos correctamente en contexto: {len(context['eventos_proximos'])} eventos")
+        
         # Verificar tipos de datos en el contexto
         for key, value in context.items():
             if isinstance(value, Decimal):
