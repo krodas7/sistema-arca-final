@@ -1982,8 +1982,8 @@ def anticipos_list(request):
 
 @login_required
 def eventos_calendario_list(request):
-    """Lista de eventos del calendario"""
-    eventos = EventoCalendario.objects.filter(creado_por=request.user).order_by('-fecha_inicio')
+    """Lista de eventos del calendario - VISIBLES PARA TODOS"""
+    eventos = EventoCalendario.objects.all().order_by('-fecha_inicio')  # Todos los eventos, no solo del usuario actual
     return render(request, 'core/eventos/list.html', {'eventos': eventos})
 
 
@@ -2065,8 +2065,8 @@ def evento_calendario_delete(request, evento_id):
 
 @login_required
 def eventos_calendario_json(request):
-    """API para obtener eventos del calendario en formato JSON"""
-    eventos = EventoCalendario.objects.filter(creado_por=request.user)
+    """API para obtener eventos del calendario en formato JSON - VISIBLES PARA TODOS"""
+    eventos = EventoCalendario.objects.all()  # Todos los eventos, no solo del usuario actual
     eventos_data = [evento.to_calendar_event() for evento in eventos]
     
     return JsonResponse(eventos_data, safe=False)
