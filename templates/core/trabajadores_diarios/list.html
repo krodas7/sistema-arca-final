@@ -970,6 +970,18 @@ function generarPDFPlanilla() {
     form.appendChild(planilla);
     {% endif %}
     
+    // Incluir los días trabajados actuales de todos los inputs
+    document.querySelectorAll('.input-days').forEach(input => {
+        const trabajadorId = input.dataset.trabajadorId;
+        const dias = input.value || '0';
+        
+        const diasInput = document.createElement('input');
+        diasInput.type = 'hidden';
+        diasInput.name = `dias_trabajador_${trabajadorId}`;
+        diasInput.value = dias;
+        form.appendChild(diasInput);
+    });
+    
     document.body.appendChild(form);
     form.submit();
     

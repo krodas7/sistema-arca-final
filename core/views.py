@@ -7676,15 +7676,27 @@ def trabajadores_diarios_pdf(request, proyecto_id):
         # Mostrar trabajadores sin planilla asignada (solo activos)
         trabajadores = TrabajadorDiario.objects.filter(proyecto=proyecto, planilla__isnull=True, activo=True).order_by('nombre')
     
-    # Obtener días trabajados temporales del POST o usar datos de la base de datos
+    # Obtener días trabajados: priorizar valores del POST (inputs editables), luego registros de BD
     dias_trabajados_data = {}
-    if request.method == 'POST':
-        for trabajador in trabajadores:
+    for trabajador in trabajadores:
+        # Primero intentar obtener del POST (valores editados en la interfaz)
+        if request.method == 'POST':
             dias_key = f'dias_trabajador_{trabajador.id}'
-            dias_trabajados_data[trabajador.id] = int(request.POST.get(dias_key, 0))
-    else:
-        # Si no hay datos POST, usar datos de la base de datos
-        for trabajador in trabajadores:
+            dias_post = request.POST.get(dias_key)
+            if dias_post:
+                dias_trabajados_data[trabajador.id] = int(dias_post)
+                continue  # Si hay valor en POST, usarlo y no buscar en BD
+        
+        # Si no hay valor en POST, usar registros de trabajo de la base de datos
+        if planilla_seleccionada and planilla_seleccionada.fecha_inicio and planilla_seleccionada.fecha_fin:
+            # Filtrar registros de trabajo dentro del rango de fechas de la planilla
+            registros = trabajador.registros_trabajo.filter(
+                fecha_inicio__lte=planilla_seleccionada.fecha_fin,
+                fecha_fin__gte=planilla_seleccionada.fecha_inicio
+            )
+            dias_trabajados_data[trabajador.id] = sum(registro.dias_trabajados for registro in registros)
+        else:
+            # Usar todos los registros de trabajo del trabajador
             dias_trabajados_data[trabajador.id] = sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all())
     
     # Crear el buffer para el PDF
