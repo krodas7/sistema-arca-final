@@ -810,35 +810,28 @@ class TrabajadorDiarioForm(forms.ModelForm):
 
 
 class RegistroTrabajoForm(forms.ModelForm):
-    """Formulario para registros de trabajo"""
-    
+    """Formulario para registros de trabajo (períodos de días trabajados)"""
+
+    def __init__(self, *args, **kwargs):
+        self.trabajador = kwargs.pop('trabajador', None)
+        super().__init__(*args, **kwargs)
+
     class Meta:
         model = RegistroTrabajo
-        fields = [
-            'proyecto', 'trabajador', 'fecha_trabajo', 'horas_trabajadas', 
-            'descripcion_trabajo', 'observaciones'
-        ]
+        fields = ['fecha_inicio', 'fecha_fin', 'dias_trabajados', 'observaciones']
         widgets = {
-            'proyecto': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'trabajador': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'fecha_trabajo': forms.DateInput(attrs={
+            'fecha_inicio': forms.DateInput(attrs={
                 'class': 'form-control',
                 'type': 'date'
             }),
-            'horas_trabajadas': forms.NumberInput(attrs={
+            'fecha_fin': forms.DateInput(attrs={
                 'class': 'form-control',
-                'step': '0.5',
-                'min': '0',
-                'max': '24'
+                'type': 'date'
             }),
-            'descripcion_trabajo': forms.Textarea(attrs={
+            'dias_trabajados': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Descripción del trabajo realizado'
+                'min': '1',
+                'placeholder': 'Número de días trabajados'
             }),
             'observaciones': forms.Textarea(attrs={
                 'class': 'form-control',
@@ -900,35 +893,40 @@ class AnticipoTrabajadorDiarioForm(forms.ModelForm):
                 'placeholder': 'Observaciones adicionales'
             })
         }
+        # (bloque de widgets legacy eliminado — los widgets válidos están arriba)
+
+
+class PlanillaTrabajadoresDiariosForm(forms.ModelForm):
+    """Formulario para crear/editar planillas de trabajadores diarios"""
+
+    def __init__(self, *args, **kwargs):
+        self.proyecto = kwargs.pop('proyecto', None)
+        super().__init__(*args, **kwargs)
+
+    class Meta:
+        model = PlanillaTrabajadoresDiarios
+        fields = ['nombre', 'descripcion', 'fecha_inicio', 'fecha_fin', 'observaciones']
         widgets = {
-            'proyecto': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'trabajador': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'monto': forms.NumberInput(attrs={
+            'nombre': forms.TextInput(attrs={
                 'class': 'form-control',
-                'step': '0.01',
-                'min': '0'
-            }),
-            'fecha_anticipo': forms.DateInput(attrs={
-                'class': 'form-control',
-                'type': 'date'
+                'placeholder': 'Ej: Planilla Semana 1, Planilla Enero 2025'
             }),
             'descripcion': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Descripción del anticipo'
+                'rows': 3,
+                'placeholder': 'Descripción opcional de la planilla'
             }),
-            'metodo_pago': forms.Select(attrs={
-                'class': 'form-select'
-            }),
-            'referencia': forms.TextInput(attrs={
+            'fecha_inicio': forms.DateInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Número de referencia'
+                'type': 'date'
             }),
-            'activo': forms.CheckboxInput(attrs={
-                'class': 'form-check-input'
-            })
+            'fecha_fin': forms.DateInput(attrs={
+                'class': 'form-control',
+                'type': 'date'
+            }),
+            'observaciones': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 2,
+                'placeholder': 'Observaciones adicionales'
+            }),
         }

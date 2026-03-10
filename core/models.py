@@ -1636,8 +1636,9 @@ class TrabajadorDiario(models.Model):
     
     @property
     def saldo_pendiente(self):
-        """Calcula el saldo pendiente después de aplicar anticipos"""
-        return self.total_a_pagar - self.total_anticipos_aplicados
+        """Saldo pendiente = total bruto menos anticipos aplicados (sin doble descuento)"""
+        total_bruto = self.total_dias_trabajados * self.pago_diario
+        return total_bruto - self.total_anticipos_aplicados
 
 
 class RegistroTrabajo(models.Model):
@@ -1743,8 +1744,11 @@ class PlanillaTrabajadoresDiarios(models.Model):
     
     @property
     def saldo_pendiente(self):
-        """Saldo pendiente en esta planilla"""
-        return self.total_a_pagar - self.total_anticipos
+        """Saldo pendiente = total bruto de la planilla menos anticipos (sin doble descuento)"""
+        total_bruto = sum(
+            t.total_dias_trabajados * t.pago_diario for t in self.trabajadores.all()
+        )
+        return total_bruto - self.total_anticipos
 
 
 # ===== MÓDULO DE ASISTENCIAS =====

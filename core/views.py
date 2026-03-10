@@ -7205,9 +7205,7 @@ def finalizar_planilla_trabajadores(request, proyecto_id):
         
         for i, trabajador in enumerate(trabajadores, 1):
             dias_trabajados = sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all())
-            if dias_trabajados == 0:
-                dias_trabajados = 1  # Valor por defecto si no hay registros
-            
+
             total_bruto = float(trabajador.pago_diario) * dias_trabajados
             
             # Calcular anticipos del trabajador
@@ -8755,30 +8753,30 @@ def planilla_trabajadores_diarios_edit(request, proyecto_id, planilla_id):
 
 
 @login_required
+@login_required
 def planilla_trabajadores_diarios_delete(request, proyecto_id, planilla_id):
     """Eliminar planilla de trabajadores diarios"""
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
     planilla = get_object_or_404(PlanillaTrabajadoresDiarios, id=planilla_id, proyecto=proyecto)
-    
+
     # No permitir eliminar planillas finalizadas
     if planilla.estado == 'finalizada':
         messages.error(request, '❌ No se puede eliminar una planilla finalizada.')
         return redirect('planillas_trabajadores_diarios_gestor')
-    
+
     if request.method == 'POST':
         nombre_planilla = planilla.nombre
-        # Eliminar trabajadores asociados
         trabajadores_count = planilla.trabajadores.count()
         planilla.delete()
         messages.success(request, f'✅ Planilla "{nombre_planilla}" eliminada exitosamente ({trabajadores_count} trabajadores eliminados).')
         return redirect('planillas_trabajadores_diarios_gestor')
-    
-    # Si es GET, eliminar directamente con confirmación JavaScript
-    nombre_planilla = planilla.nombre
-    trabajadores_count = planilla.trabajadores.count()
-    planilla.delete()
-    messages.success(request, f'✅ Planilla "{nombre_planilla}" eliminada exitosamente ({trabajadores_count} trabajadores eliminados).')
-    return redirect('planillas_trabajadores_diarios_gestor')
+
+    # GET: mostrar página de confirmación antes de eliminar
+    return render(request, 'core/planillas_trabajadores_diarios/delete.html', {
+        'proyecto': proyecto,
+        'planilla': planilla,
+        'trabajadores_count': planilla.trabajadores.count(),
+    })
 
 
 @login_required
@@ -8798,15 +8796,11 @@ def planilla_trabajadores_diarios_finalizar(request, proyecto_id, planilla_id):
             # Marcar trabajadores como inactivos
             planilla.trabajadores.update(activo=False)
             
-            # Marcar anticipos como procesados
+            # Marcar anticipos aplicados como liquidados
             AnticipoTrabajadorDiario.objects.filter(
                 trabajador__planilla=planilla,
                 estado='aplicado'
-            ).update(
-                estado='procesado',
-                fecha_liquidacion=timezone.now().date(),
-                liquidado_por=request.user
-            )
+            ).update(estado='liquidado')
             
             # Crear registro de planilla liquidada
             PlanillaLiquidada.objects.create(
