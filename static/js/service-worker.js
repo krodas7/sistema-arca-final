@@ -1,8 +1,8 @@
 // Service Worker para Sistema ARCA Construcción
 // Versión: 2.1.0
 
-const STATIC_CACHE = 'arca-static-v2.1.0';
-const DYNAMIC_CACHE = 'arca-dynamic-v2.1.0';
+const STATIC_CACHE = 'arca-static-v2.2.0';
+const DYNAMIC_CACHE = 'arca-dynamic-v2.2.0';
 
 // Archivos estáticos para cachear
 const STATIC_FILES = [
