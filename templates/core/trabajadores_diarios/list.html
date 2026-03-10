@@ -772,6 +772,7 @@
                                                data-pago-diario="{{ trabajador.pago_diario }}"
                                        data-anticipos="{{ trabajador.anticipos_monto|default:0 }}"
                                                min="0"
+                                               step="0.5"
                                        {% if planilla_seleccionada.estado == 'finalizada' %}disabled readonly style="background: #f3f4f6; cursor: not-allowed;"{% else %}onchange="calcularTotal(this)"{% endif %}>
                             </td>
                             <td>

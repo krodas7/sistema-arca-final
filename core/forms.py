@@ -830,8 +830,9 @@ class RegistroTrabajoForm(forms.ModelForm):
             }),
             'dias_trabajados': forms.NumberInput(attrs={
                 'class': 'form-control',
-                'min': '1',
-                'placeholder': 'Número de días trabajados'
+                'min': '0.5',
+                'step': '0.5',
+                'placeholder': 'Ej: 1, 1.5, 2, 2.5...'
             }),
             'observaciones': forms.Textarea(attrs={
                 'class': 'form-control',

@@ -7638,8 +7638,9 @@ def actualizar_dias_trabajados(request, proyecto_id, trabajador_id):
     if request.method == 'POST':
         try:
             trabajador = get_object_or_404(TrabajadorDiario, id=trabajador_id, proyecto_id=proyecto_id)
-            dias_trabajados = int(request.POST.get('dias_trabajados', 0))
-            
+            raw = request.POST.get('dias_trabajados', '0').replace(',', '.')
+            dias_trabajados = Decimal(raw) if raw else Decimal('0')
+
             # Actualizar o crear registro de trabajo
             registro, created = RegistroTrabajo.objects.get_or_create(
                 trabajador=trabajador,
@@ -7650,11 +7651,11 @@ def actualizar_dias_trabajados(request, proyecto_id, trabajador_id):
                     'registrado_por': request.user
                 }
             )
-            
+
             if not created:
                 registro.dias_trabajados = dias_trabajados
                 registro.save()
-            
+
             return JsonResponse({'success': True, 'total_a_pagar': float(trabajador.total_a_pagar)})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
@@ -7691,7 +7692,7 @@ def trabajadores_diarios_pdf(request, proyecto_id):
             dias_key = f'dias_trabajador_{trabajador.id}'
             dias_post = request.POST.get(dias_key)
             if dias_post:
-                dias_trabajados_data[trabajador.id] = int(dias_post)
+                dias_trabajados_data[trabajador.id] = float(dias_post.replace(',', '.'))
                 continue  # Si hay valor en POST, usarlo y no buscar en BD
         
         # Si no hay valor en POST, usar registros de trabajo de la base de datos

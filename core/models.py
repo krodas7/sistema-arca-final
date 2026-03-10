@@ -1646,7 +1646,7 @@ class RegistroTrabajo(models.Model):
     trabajador = models.ForeignKey(TrabajadorDiario, on_delete=models.CASCADE, related_name='registros_trabajo', verbose_name="Trabajador")
     fecha_inicio = models.DateField(verbose_name="Fecha de inicio del período")
     fecha_fin = models.DateField(verbose_name="Fecha de fin del período")
-    dias_trabajados = models.IntegerField(verbose_name="Días trabajados", help_text="Número de días trabajados en este período")
+    dias_trabajados = models.DecimalField(max_digits=5, decimal_places=1, verbose_name="Días trabajados", help_text="Número de días trabajados en este período (acepta medios días: 0.5, 1.5, etc.)")
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
     fecha_registro = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de registro")
     registrado_por = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Registrado por")
