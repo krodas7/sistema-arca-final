@@ -7774,9 +7774,9 @@ def trabajadores_diarios_pdf(request, proyecto_id):
             total_trabajador = float(trabajador.pago_diario) * dias_trabajados
             total_a_pagar += total_trabajador
         
-        # Anticipos específicos de trabajadores diarios
+        # Anticipos filtrados solo por los trabajadores de esta planilla/filtro actual
         anticipos_trabajadores = AnticipoTrabajadorDiario.objects.filter(
-            trabajador__proyecto=proyecto
+            trabajador__in=trabajadores
         )
         total_anticipos = anticipos_trabajadores.aggregate(total=Sum('monto'))['total'] or Decimal('0')
         total_aplicado = sum(anticipo.monto_aplicado for anticipo in anticipos_trabajadores)
