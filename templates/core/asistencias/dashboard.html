@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}Asistencias - Sistema de Construcción{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #2563eb;
+        --primary-light: #3b82f6;
+        --success: #16a34a;
+        --danger: #dc2626;
+        --warning: #d97706;
+        --info: #0891b2;
+        --border: #e5e7eb;
+        --bg-light: #f9fafb;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+    }
+
+    .page-header {
+        background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 16px;
+        margin-bottom: 2rem;
+    }
+
+    .page-header h1 { font-size: 1.875rem; font-weight: 700; margin: 0 0 0.5rem 0; }
+    .page-header p { margin: 0; opacity: 0.85; font-size: 1rem; }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .stat-card .icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
+    .stat-card .label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+
+    .icon-presentes  { background: #dcfce7; color: #16a34a; }
+    .icon-ausentes   { background: #fee2e2; color: #dc2626; }
+    .icon-tardanzas  { background: #fef3c7; color: #d97706; }
+    .icon-permisos   { background: #e0f2fe; color: #0891b2; }
+    .icon-total      { background: #ede9fe; color: #7c3aed; }
+
+    .section-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+        overflow: hidden;
+        margin-bottom: 1.5rem;
+    }
+
+    .section-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .section-header h5 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th { background: var(--bg-light); padding: 0.75rem 1rem; font-size: 0.8125rem; font-weight: 600; text-align: left; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
+    .data-table td { padding: 0.875rem 1rem; font-size: 0.9375rem; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--bg-light); }
+
+    .badge { padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+
+    .quick-actions {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-bottom: 2rem;
+    }
+
+    .btn-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9375rem;
+        text-decoration: none;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn-primary-action { background: var(--primary); color: white; }
+    .btn-primary-action:hover { background: var(--primary-light); color: white; }
+    .btn-secondary-action { background: var(--bg-light); color: var(--text-primary); border: 1px solid var(--border); }
+    .btn-secondary-action:hover { background: #f3f4f6; color: var(--text-primary); }
+
+    .empty-state { text-align: center; padding: 3rem 2rem; color: var(--text-secondary); }
+    .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
+    .empty-state p { margin: 0; font-size: 0.95rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h1><i class="fas fa-clipboard-check me-2"></i>Módulo de Asistencias</h1>
+                <p>Resumen de hoy: {{ hoy|date:"l, d \d\e F \d\e Y" }}</p>
+            </div>
+            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                <a href="{% url 'asistencia_create' %}" class="btn-action btn-primary-action">
+                    <i class="fas fa-plus"></i> Registrar Asistencia
+                </a>
+                <a href="{% url 'asistencias_list' %}" class="btn-action btn-secondary-action">
+                    <i class="fas fa-list"></i> Ver Todo
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats del mes -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="icon icon-presentes"><i class="fas fa-check-circle"></i></div>
+            <div class="value">{{ total_presentes }}</div>
+            <div class="label">Presentes (mes)</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon icon-ausentes"><i class="fas fa-times-circle"></i></div>
+            <div class="value">{{ total_ausentes }}</div>
+            <div class="label">Ausentes (mes)</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon icon-tardanzas"><i class="fas fa-clock"></i></div>
+            <div class="value">{{ total_tardanzas }}</div>
+            <div class="label">Tardanzas (mes)</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon icon-permisos"><i class="fas fa-file-alt"></i></div>
+            <div class="value">{{ total_permisos }}</div>
+            <div class="label">Permisos (mes)</div>
+        </div>
+        <div class="stat-card">
+            <div class="icon icon-total"><i class="fas fa-calendar-alt"></i></div>
+            <div class="value">{{ total_mes }}</div>
+            <div class="label">Total registros (mes)</div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Asistencias de hoy -->
+        <div class="col-lg-7">
+            <div class="section-card">
+                <div class="section-header">
+                    <h5><i class="fas fa-calendar-day me-2 text-primary"></i>Asistencias de Hoy</h5>
+                    <a href="{% url 'asistencia_create' %}" class="btn-action btn-primary-action" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                        <i class="fas fa-plus"></i> Registrar
+                    </a>
+                </div>
+                {% if asistencias_hoy %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Personal</th>
+                            <th>Tipo</th>
+                            <th>Estado</th>
+                            <th>Entrada</th>
+                            <th>Salida</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in asistencias_hoy %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'asistencia_detail' a.id %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">
+                                    {{ a.nombre_personal }}
+                                </a>
+                                {% if a.proyecto %}
+                                    <br><small style="color: var(--text-secondary);">{{ a.proyecto.nombre }}</small>
+                                {% endif %}
+                            </td>
+                            <td><small class="badge bg-secondary">{{ a.get_tipo_personal_display }}</small></td>
+                            <td>
+                                <span class="badge {{ a.get_estado_badge_class }}">
+                                    {{ a.get_estado_display }}
+                                </span>
+                            </td>
+                            <td>{{ a.hora_entrada|time:"H:i"|default:"--" }}</td>
+                            <td>{{ a.hora_salida|time:"H:i"|default:"--" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <p>No hay asistencias registradas hoy.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Últimos registros -->
+        <div class="col-lg-5">
+            <div class="section-card">
+                <div class="section-header">
+                    <h5><i class="fas fa-history me-2 text-secondary"></i>Últimos Registros</h5>
+                    <a href="{% url 'asistencias_list' %}" style="font-size: 0.875rem; color: var(--primary); text-decoration: none;">Ver todos →</a>
+                </div>
+                {% if ultimas_asistencias %}
+                <div style="padding: 0.5rem 0;">
+                    {% for a in ultimas_asistencias %}
+                    <div style="display: flex; align-items: center; gap: 1rem; padding: 0.875rem 1.5rem; border-bottom: 1px solid var(--border);">
+                        <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">
+                            {{ a.nombre_personal|first|upper }}
+                        </div>
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="font-weight: 600; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ a.nombre_personal }}</div>
+                            <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ a.fecha|date:"d/m/Y" }}</div>
+                        </div>
+                        <span class="badge {{ a.get_estado_badge_class }}">{{ a.get_estado_display }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-inbox"></i>
+                    <p>No hay registros aún.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

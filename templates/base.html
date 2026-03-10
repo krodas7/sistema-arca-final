@@ -115,6 +115,13 @@
                         <span>Trabajadores Diarios</span>
                     </a>
                 </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if 'asistencia' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'asistencias_dashboard' %}">
+                        <i class="fas fa-clipboard-check"></i>
+                        <span>Asistencias</span>
+                    </a>
+                </li>
                 
                 <li class="nav-item">
                     <a class="nav-link {% if 'gastos' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gastos_dashboard' %}">

@@ -46,7 +46,6 @@ urlpatterns = [
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/', views.trabajadores_diarios_list, name='trabajadores_diarios_list'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/crear/', views.trabajador_diario_create, name='trabajador_diario_create'),
     path('proyectos/<int:proyecto_id>/trabajadores-diarios/finalizar/', views.finalizar_planilla_trabajadores, name='finalizar_planilla_trabajadores'),
-    path('proyectos/<int:proyecto_id>/trabajadores-diarios/generar-pdf/', views.generar_pdf_planilla_trabajadores, name='generar_pdf_planilla_trabajadores'),
     path(
         'proyectos/<int:proyecto_id>/trabajadores-diarios/planilla/<int:planilla_id>/reabrir/',
         views.reabrir_planilla_trabajadores,
@@ -303,4 +302,12 @@ urlpatterns = [
     path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/finalizar/', views.planilla_trabajadores_diarios_finalizar, name='planilla_trabajadores_diarios_finalizar'),
     path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/agregar-trabajador/', views.trabajador_diario_add_to_planilla, name='trabajador_diario_add_to_planilla'),
     path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/remover-trabajador/<int:trabajador_id>/', views.trabajador_diario_remove_from_planilla, name='trabajador_diario_remove_from_planilla'),
+
+    # ==================== ASISTENCIAS ====================
+    path('asistencias/', views.asistencias_dashboard, name='asistencias_dashboard'),
+    path('asistencias/lista/', views.asistencias_list, name='asistencias_list'),
+    path('asistencias/registrar/', views.asistencia_create, name='asistencia_create'),
+    path('asistencias/<int:asistencia_id>/', views.asistencia_detail, name='asistencia_detail'),
+    path('asistencias/<int:asistencia_id>/editar/', views.asistencia_edit, name='asistencia_edit'),
+    path('asistencias/<int:asistencia_id>/eliminar/', views.asistencia_delete, name='asistencia_delete'),
 ]

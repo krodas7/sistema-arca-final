@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}Detalle de Asistencia{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem; }
+    .page-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0; }
+    .detail-card { background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.07); overflow: hidden; margin-bottom: 1.5rem; }
+    .detail-card-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid #e5e7eb; font-weight: 600; font-size: 1rem; }
+    .detail-card-body { padding: 1.75rem; }
+    .detail-row { display: flex; gap: 1rem; align-items: flex-start; padding: 0.875rem 0; border-bottom: 1px solid #f3f4f6; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-size: 0.875rem; font-weight: 600; color: #6b7280; min-width: 160px; }
+    .detail-value { font-size: 0.9375rem; color: #111827; }
+    .badge { padding: 0.4rem 0.9rem; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+    .btn-action { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.4rem; border-radius: 8px; font-weight: 600; font-size: 0.9375rem; text-decoration: none; transition: all 0.2s; border: 1px solid #e5e7eb; }
+    .btn-edit { background: #eff6ff; color: #2563eb; border-color: #93c5fd; }
+    .btn-edit:hover { background: #dbeafe; color: #1d4ed8; }
+    .btn-delete { background: #fef2f2; color: #dc2626; border-color: #fca5a5; }
+    .btn-delete:hover { background: #fee2e2; color: #b91c1c; }
+    .btn-back { background: #f9fafb; color: #374151; }
+    .btn-back:hover { background: #f3f4f6; color: #374151; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-7">
+
+            <div class="page-header">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div>
+                        <h1><i class="fas fa-clipboard-check me-2"></i>Detalle de Asistencia</h1>
+                        <p style="margin: 0.25rem 0 0 0; opacity: 0.85;">{{ asistencia.nombre_personal }} — {{ asistencia.fecha|date:"l, d \d\e F \d\e Y" }}</p>
+                    </div>
+                    <a href="{% url 'asistencias_list' %}" style="color: white; text-decoration: none; opacity: 0.85;">
+                        <i class="fas fa-arrow-left me-1"></i> Volver
+                    </a>
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-card-header"><i class="fas fa-user me-2 text-primary"></i>Información del Personal</div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <span class="detail-label">Nombre</span>
+                        <span class="detail-value" style="font-weight: 600; font-size: 1.05rem;">{{ asistencia.nombre_personal }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Tipo</span>
+                        <span class="detail-value"><span class="badge bg-secondary">{{ asistencia.get_tipo_personal_display }}</span></span>
+                    </div>
+                    {% if asistencia.proyecto %}
+                    <div class="detail-row">
+                        <span class="detail-label">Proyecto</span>
+                        <span class="detail-value">{{ asistencia.proyecto.nombre }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-card-header"><i class="fas fa-calendar-check me-2 text-success"></i>Datos de Asistencia</div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <span class="detail-label">Fecha</span>
+                        <span class="detail-value">{{ asistencia.fecha|date:"d/m/Y" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Estado</span>
+                        <span class="detail-value">
+                            <span class="badge {{ asistencia.get_estado_badge_class }}">{{ asistencia.get_estado_display }}</span>
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Hora de Entrada</span>
+                        <span class="detail-value">{{ asistencia.hora_entrada|time:"H:i"|default:"No registrada" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Hora de Salida</span>
+                        <span class="detail-value">{{ asistencia.hora_salida|time:"H:i"|default:"No registrada" }}</span>
+                    </div>
+                    {% if asistencia.horas_trabajadas %}
+                    <div class="detail-row">
+                        <span class="detail-label">Horas Trabajadas</span>
+                        <span class="detail-value" style="font-weight: 600; color: #16a34a;">{{ asistencia.horas_trabajadas }} horas</span>
+                    </div>
+                    {% endif %}
+                    {% if asistencia.observaciones %}
+                    <div class="detail-row">
+                        <span class="detail-label">Observaciones</span>
+                        <span class="detail-value">{{ asistencia.observaciones }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="detail-card">
+                <div class="detail-card-header"><i class="fas fa-info-circle me-2 text-secondary"></i>Auditoría</div>
+                <div class="detail-card-body">
+                    <div class="detail-row">
+                        <span class="detail-label">Registrado por</span>
+                        <span class="detail-value">{{ asistencia.registrado_por.get_full_name|default:asistencia.registrado_por.username }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Fecha de registro</span>
+                        <span class="detail-value">{{ asistencia.fecha_registro|date:"d/m/Y H:i" }}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Última actualización</span>
+                        <span class="detail-value">{{ asistencia.fecha_actualizacion|date:"d/m/Y H:i" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <a href="{% url 'asistencias_list' %}" class="btn-action btn-back"><i class="fas fa-arrow-left"></i> Volver</a>
+                <a href="{% url 'asistencia_edit' asistencia.id %}" class="btn-action btn-edit"><i class="fas fa-edit"></i> Editar</a>
+                <a href="{% url 'asistencia_delete' asistencia.id %}" class="btn-action btn-delete"><i class="fas fa-trash"></i> Eliminar</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

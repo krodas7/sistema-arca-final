@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block title %}Eliminar Asistencia{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-xl-5">
+
+            <div style="background: linear-gradient(135deg, #7f1d1d 0%, #dc2626 100%); color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem;">
+                <h1 style="font-size: 1.75rem; font-weight: 700; margin: 0;"><i class="fas fa-trash me-2"></i>Eliminar Asistencia</h1>
+            </div>
+
+            <div style="background: white; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.07); overflow: hidden;">
+                <div style="padding: 2rem; text-align: center;">
+                    <div style="width: 70px; height: 70px; background: #fee2e2; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; color: #dc2626;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h4 style="font-weight: 700; color: #111827; margin-bottom: 0.75rem;">¿Eliminar este registro?</h4>
+                    <p style="color: #6b7280; margin-bottom: 1.5rem;">Esta acción no se puede deshacer.</p>
+
+                    <div style="background: #f9fafb; border-radius: 10px; padding: 1.25rem; text-align: left; margin-bottom: 2rem;">
+                        <div style="margin-bottom: 0.5rem;"><strong>Personal:</strong> {{ asistencia.nombre_personal }}</div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Fecha:</strong> {{ asistencia.fecha|date:"d/m/Y" }}</div>
+                        <div style="margin-bottom: 0.5rem;"><strong>Estado:</strong>
+                            <span class="badge {{ asistencia.get_estado_badge_class }}">{{ asistencia.get_estado_display }}</span>
+                        </div>
+                        {% if asistencia.proyecto %}
+                        <div><strong>Proyecto:</strong> {{ asistencia.proyecto.nombre }}</div>
+                        {% endif %}
+                    </div>
+
+                    <form method="POST" action="{% url 'asistencia_delete' asistencia.id %}">
+                        {% csrf_token %}
+                        <div style="display: flex; gap: 1rem; justify-content: center;">
+                            <a href="{% url 'asistencias_list' %}" style="background: #f9fafb; color: #374151; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; border: 1px solid #e5e7eb; text-decoration: none; font-size: 1rem;">
+                                Cancelar
+                            </a>
+                            <button type="submit" style="background: #dc2626; color: white; padding: 0.75rem 2rem; border-radius: 8px; font-weight: 600; border: none; cursor: pointer; font-size: 1rem;">
+                                <i class="fas fa-trash me-2"></i>Sí, Eliminar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

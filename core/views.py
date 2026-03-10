@@ -8873,3 +8873,233 @@ def trabajador_diario_remove_from_planilla(request, proyecto_id, planilla_id, tr
     }
     
     return render(request, 'core/planillas_trabajadores_diarios/remove_trabajador.html', context)
+
+
+# ==================== MÓDULO DE ASISTENCIAS ====================
+
+@login_required
+def asistencias_dashboard(request):
+    """Dashboard principal del módulo de asistencias"""
+    from core.models import Asistencia, Colaborador, TrabajadorDiario, Proyecto
+    
+    hoy = timezone.now().date()
+    inicio_mes = hoy.replace(day=1)
+    
+    # Estadísticas del mes
+    asistencias_mes = Asistencia.objects.filter(fecha__gte=inicio_mes)
+    total_presentes = asistencias_mes.filter(estado='presente').count()
+    total_ausentes = asistencias_mes.filter(estado='ausente').count()
+    total_tardanzas = asistencias_mes.filter(estado='tardanza').count()
+    total_permisos = asistencias_mes.filter(estado='permiso').count()
+    
+    # Asistencias de hoy
+    asistencias_hoy = Asistencia.objects.filter(fecha=hoy).select_related(
+        'colaborador', 'trabajador_diario', 'proyecto'
+    ).order_by('-fecha_registro')
+    
+    # Últimas asistencias registradas
+    ultimas_asistencias = Asistencia.objects.select_related(
+        'colaborador', 'trabajador_diario', 'proyecto', 'registrado_por'
+    ).order_by('-fecha', '-fecha_registro')[:10]
+    
+    # Proyectos para filtros
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
+    
+    context = {
+        'hoy': hoy,
+        'total_presentes': total_presentes,
+        'total_ausentes': total_ausentes,
+        'total_tardanzas': total_tardanzas,
+        'total_permisos': total_permisos,
+        'total_mes': asistencias_mes.count(),
+        'asistencias_hoy': asistencias_hoy,
+        'ultimas_asistencias': ultimas_asistencias,
+        'proyectos': proyectos,
+    }
+    return render(request, 'core/asistencias/dashboard.html', context)
+
+
+@login_required
+def asistencias_list(request):
+    """Lista de asistencias con filtros"""
+    from core.models import Asistencia, Proyecto
+    
+    asistencias = Asistencia.objects.select_related(
+        'colaborador', 'trabajador_diario', 'proyecto', 'registrado_por'
+    ).order_by('-fecha', '-fecha_registro')
+    
+    # Filtros
+    fecha_desde = request.GET.get('fecha_desde')
+    fecha_hasta = request.GET.get('fecha_hasta')
+    estado = request.GET.get('estado')
+    proyecto_id = request.GET.get('proyecto')
+    tipo_personal = request.GET.get('tipo_personal')
+    busqueda = request.GET.get('busqueda', '').strip()
+    
+    if fecha_desde:
+        asistencias = asistencias.filter(fecha__gte=fecha_desde)
+    if fecha_hasta:
+        asistencias = asistencias.filter(fecha__lte=fecha_hasta)
+    if estado:
+        asistencias = asistencias.filter(estado=estado)
+    if proyecto_id:
+        asistencias = asistencias.filter(proyecto_id=proyecto_id)
+    if tipo_personal:
+        asistencias = asistencias.filter(tipo_personal=tipo_personal)
+    if busqueda:
+        asistencias = asistencias.filter(
+            Q(colaborador__nombre__icontains=busqueda) |
+            Q(trabajador_diario__nombre__icontains=busqueda)
+        )
+    
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
+    
+    context = {
+        'asistencias': asistencias,
+        'proyectos': proyectos,
+        'estado_choices': Asistencia.ESTADO_CHOICES,
+        'tipo_personal_choices': Asistencia.TIPO_PERSONAL_CHOICES,
+        'filtros': {
+            'fecha_desde': fecha_desde or '',
+            'fecha_hasta': fecha_hasta or '',
+            'estado': estado or '',
+            'proyecto': proyecto_id or '',
+            'tipo_personal': tipo_personal or '',
+            'busqueda': busqueda,
+        }
+    }
+    return render(request, 'core/asistencias/list.html', context)
+
+
+@login_required
+def asistencia_create(request):
+    """Crear nuevo registro de asistencia"""
+    from core.models import Asistencia, Colaborador, TrabajadorDiario, Proyecto
+    
+    colaboradores = Colaborador.objects.filter(activo=True).order_by('nombre')
+    trabajadores = TrabajadorDiario.objects.filter(activo=True).order_by('nombre')
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
+    
+    if request.method == 'POST':
+        tipo_personal = request.POST.get('tipo_personal')
+        colaborador_id = request.POST.get('colaborador')
+        trabajador_id = request.POST.get('trabajador_diario')
+        proyecto_id = request.POST.get('proyecto')
+        fecha = request.POST.get('fecha')
+        estado = request.POST.get('estado', 'presente')
+        hora_entrada = request.POST.get('hora_entrada') or None
+        hora_salida = request.POST.get('hora_salida') or None
+        observaciones = request.POST.get('observaciones', '')
+        
+        # Validaciones básicas
+        if not tipo_personal or not fecha or not estado:
+            messages.error(request, '❌ Tipo de personal, fecha y estado son obligatorios.')
+        elif tipo_personal == 'colaborador' and not colaborador_id:
+            messages.error(request, '❌ Debes seleccionar un colaborador.')
+        elif tipo_personal == 'trabajador_diario' and not trabajador_id:
+            messages.error(request, '❌ Debes seleccionar un trabajador diario.')
+        else:
+            asistencia = Asistencia(
+                tipo_personal=tipo_personal,
+                fecha=fecha,
+                estado=estado,
+                hora_entrada=hora_entrada,
+                hora_salida=hora_salida,
+                observaciones=observaciones,
+                registrado_por=request.user,
+            )
+            if tipo_personal == 'colaborador':
+                asistencia.colaborador_id = colaborador_id
+            else:
+                asistencia.trabajador_diario_id = trabajador_id
+            if proyecto_id:
+                asistencia.proyecto_id = proyecto_id
+            
+            asistencia.save()
+            messages.success(request, f'✅ Asistencia registrada correctamente para {asistencia.nombre_personal}.')
+            return redirect('asistencias_list')
+    
+    context = {
+        'colaboradores': colaboradores,
+        'trabajadores': trabajadores,
+        'proyectos': proyectos,
+        'estado_choices': Asistencia.ESTADO_CHOICES,
+        'hoy': timezone.now().date(),
+    }
+    return render(request, 'core/asistencias/create.html', context)
+
+
+@login_required
+def asistencia_detail(request, asistencia_id):
+    """Detalle de una asistencia"""
+    from core.models import Asistencia
+    asistencia = get_object_or_404(Asistencia, id=asistencia_id)
+    return render(request, 'core/asistencias/detail.html', {'asistencia': asistencia})
+
+
+@login_required
+def asistencia_edit(request, asistencia_id):
+    """Editar registro de asistencia"""
+    from core.models import Asistencia, Colaborador, TrabajadorDiario, Proyecto
+    
+    asistencia = get_object_or_404(Asistencia, id=asistencia_id)
+    colaboradores = Colaborador.objects.filter(activo=True).order_by('nombre')
+    trabajadores = TrabajadorDiario.objects.filter(activo=True).order_by('nombre')
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
+    
+    if request.method == 'POST':
+        tipo_personal = request.POST.get('tipo_personal')
+        colaborador_id = request.POST.get('colaborador')
+        trabajador_id = request.POST.get('trabajador_diario')
+        proyecto_id = request.POST.get('proyecto')
+        fecha = request.POST.get('fecha')
+        estado = request.POST.get('estado', 'presente')
+        hora_entrada = request.POST.get('hora_entrada') or None
+        hora_salida = request.POST.get('hora_salida') or None
+        observaciones = request.POST.get('observaciones', '')
+        
+        if not tipo_personal or not fecha or not estado:
+            messages.error(request, '❌ Tipo de personal, fecha y estado son obligatorios.')
+        else:
+            asistencia.tipo_personal = tipo_personal
+            asistencia.fecha = fecha
+            asistencia.estado = estado
+            asistencia.hora_entrada = hora_entrada
+            asistencia.hora_salida = hora_salida
+            asistencia.observaciones = observaciones
+            asistencia.proyecto_id = proyecto_id or None
+            
+            if tipo_personal == 'colaborador':
+                asistencia.colaborador_id = colaborador_id
+                asistencia.trabajador_diario = None
+            else:
+                asistencia.trabajador_diario_id = trabajador_id
+                asistencia.colaborador = None
+            
+            asistencia.save()
+            messages.success(request, f'✅ Asistencia actualizada correctamente.')
+            return redirect('asistencias_list')
+    
+    context = {
+        'asistencia': asistencia,
+        'colaboradores': colaboradores,
+        'trabajadores': trabajadores,
+        'proyectos': proyectos,
+        'estado_choices': Asistencia.ESTADO_CHOICES,
+    }
+    return render(request, 'core/asistencias/edit.html', context)
+
+
+@login_required
+def asistencia_delete(request, asistencia_id):
+    """Eliminar registro de asistencia"""
+    from core.models import Asistencia
+    asistencia = get_object_or_404(Asistencia, id=asistencia_id)
+    
+    if request.method == 'POST':
+        nombre = asistencia.nombre_personal
+        asistencia.delete()
+        messages.success(request, f'✅ Asistencia de {nombre} eliminada correctamente.')
+        return redirect('asistencias_list')
+    
+    return render(request, 'core/asistencias/delete.html', {'asistencia': asistencia})

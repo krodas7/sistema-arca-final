@@ -1747,6 +1747,100 @@ class PlanillaTrabajadoresDiarios(models.Model):
         return self.total_a_pagar - self.total_anticipos
 
 
+# ===== MÓDULO DE ASISTENCIAS =====
+
+class Asistencia(models.Model):
+    """Modelo para registrar asistencia del personal"""
+    
+    ESTADO_CHOICES = [
+        ('presente', 'Presente'),
+        ('ausente', 'Ausente'),
+        ('tardanza', 'Tardanza'),
+        ('permiso', 'Permiso'),
+        ('vacaciones', 'Vacaciones'),
+        ('feriado', 'Feriado'),
+    ]
+    
+    TIPO_PERSONAL_CHOICES = [
+        ('colaborador', 'Colaborador'),
+        ('trabajador_diario', 'Trabajador Diario'),
+    ]
+    
+    # Personal - puede ser colaborador o trabajador diario
+    tipo_personal = models.CharField(max_length=20, choices=TIPO_PERSONAL_CHOICES, verbose_name="Tipo de Personal")
+    colaborador = models.ForeignKey(
+        'Colaborador', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='asistencias', verbose_name="Colaborador"
+    )
+    trabajador_diario = models.ForeignKey(
+        'TrabajadorDiario', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='asistencias', verbose_name="Trabajador Diario"
+    )
+    
+    # Proyecto al que pertenece (opcional)
+    proyecto = models.ForeignKey(
+        'Proyecto', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='asistencias', verbose_name="Proyecto"
+    )
+    
+    # Datos de asistencia
+    fecha = models.DateField(verbose_name="Fecha")
+    estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='presente', verbose_name="Estado")
+    hora_entrada = models.TimeField(null=True, blank=True, verbose_name="Hora de Entrada")
+    hora_salida = models.TimeField(null=True, blank=True, verbose_name="Hora de Salida")
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
+    
+    # Auditoría
+    registrado_por = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Registrado por")
+    fecha_registro = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Registro")
+    fecha_actualizacion = models.DateTimeField(auto_now=True, verbose_name="Última Actualización")
+    
+    class Meta:
+        verbose_name = 'Asistencia'
+        verbose_name_plural = 'Asistencias'
+        ordering = ['-fecha', '-fecha_registro']
+    
+    def __str__(self):
+        nombre = self.get_nombre_personal()
+        return f"{nombre} - {self.fecha} - {self.get_estado_display()}"
+    
+    def get_nombre_personal(self):
+        """Retorna el nombre del personal según tipo"""
+        if self.colaborador:
+            return self.colaborador.nombre
+        elif self.trabajador_diario:
+            return self.trabajador_diario.nombre
+        return "Sin nombre"
+    
+    @property
+    def nombre_personal(self):
+        return self.get_nombre_personal()
+    
+    @property
+    def horas_trabajadas(self):
+        """Calcula las horas trabajadas si hay hora entrada y salida"""
+        if self.hora_entrada and self.hora_salida:
+            from datetime import datetime, date
+            entrada = datetime.combine(date.today(), self.hora_entrada)
+            salida = datetime.combine(date.today(), self.hora_salida)
+            diff = salida - entrada
+            horas = diff.seconds / 3600
+            return round(horas, 2)
+        return None
+    
+    def get_estado_badge_class(self):
+        """Retorna clase CSS para el badge del estado"""
+        clases = {
+            'presente': 'bg-success',
+            'ausente': 'bg-danger',
+            'tardanza': 'bg-warning text-dark',
+            'permiso': 'bg-info',
+            'vacaciones': 'bg-primary',
+            'feriado': 'bg-secondary',
+        }
+        return clases.get(self.estado, 'bg-secondary')
+
+
 class PlanillaLiquidada(models.Model):
     """Modelo para registrar planillas de personal liquidadas"""
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='planillas_liquidadas', verbose_name="Proyecto")
