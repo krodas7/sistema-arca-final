@@ -317,7 +317,9 @@
     <script src="{% static 'js/global-functions.js' %}"></script>
     
     <!-- PWA Scripts -->
+    {% if debug %}
     <script src="{% static 'js/pwa-diagnostic.js' %}"></script>
+    {% endif %}
     <script src="{% static 'js/pwa-register.js' %}"></script>
     
     <!-- Toast Notifications -->

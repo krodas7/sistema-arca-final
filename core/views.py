@@ -3738,8 +3738,8 @@ def rentabilidad_view(request):
             ingresos_mes = Factura.objects.filter(
                 fecha_emision__month=mes,
                 fecha_emision__year=año,
-                monto_pagado__gt=0
-            ).aggregate(total=Sum('monto_pagado'))['total'] or Decimal('0.00')
+                estado='pagada'
+            ).aggregate(total=Sum('monto_total'))['total'] or Decimal('0.00')
             
             gastos_mes_raw = Gasto.objects.filter(
                 fecha_gasto__month=mes,
