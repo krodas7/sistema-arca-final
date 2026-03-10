@@ -1,8 +1,8 @@
 // Service Worker para Sistema ARCA Construcción
 // Versión: 2.1.0
 
-const STATIC_CACHE = 'arca-static-v2.2.0';
-const DYNAMIC_CACHE = 'arca-dynamic-v2.2.0';
+const STATIC_CACHE = 'arca-static-v2.3.0';
+const DYNAMIC_CACHE = 'arca-dynamic-v2.3.0';
 
 // Archivos estáticos para cachear
 const STATIC_FILES = [
@@ -113,9 +113,13 @@ self.addEventListener('fetch', (event) => {
 
     // Estrategia de cache para diferentes tipos de recursos
     if (request.method === 'GET') {
-        // Archivos estáticos - Cache First
-        if (STATIC_FILES.includes(url.pathname) || url.pathname.startsWith('/static/')) {
+        // Archivos en lista explícita - Cache First (controlados y versionados)
+        if (STATIC_FILES.includes(url.pathname)) {
             event.respondWith(cacheFirst(request, STATIC_CACHE));
+        }
+        // Otros archivos estáticos - Stale While Revalidate (siempre se actualiza en background)
+        else if (url.pathname.startsWith('/static/')) {
+            event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
         }
         // API calls - Network First
         else if (API_URLS.some(apiUrl => url.pathname.startsWith(apiUrl))) {
