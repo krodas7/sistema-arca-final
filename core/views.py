@@ -7204,7 +7204,7 @@ def finalizar_planilla_trabajadores(request, proyecto_id):
         data = [['No.', 'Nombre del Trabajador', 'Pago Diario', 'Días Trabajados', 'Total Bruto', 'Anticipos', 'Total Neto']]
         
         for i, trabajador in enumerate(trabajadores, 1):
-            dias_trabajados = sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all())
+            dias_trabajados = float(sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all()))
 
             total_bruto = float(trabajador.pago_diario) * dias_trabajados
             
@@ -7702,10 +7702,10 @@ def trabajadores_diarios_pdf(request, proyecto_id):
                 fecha_inicio__lte=planilla_seleccionada.fecha_fin,
                 fecha_fin__gte=planilla_seleccionada.fecha_inicio
             )
-            dias_trabajados_data[trabajador.id] = sum(registro.dias_trabajados for registro in registros)
+            dias_trabajados_data[trabajador.id] = float(sum(registro.dias_trabajados for registro in registros))
         else:
             # Usar todos los registros de trabajo del trabajador
-            dias_trabajados_data[trabajador.id] = sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all())
+            dias_trabajados_data[trabajador.id] = float(sum(registro.dias_trabajados for registro in trabajador.registros_trabajo.all()))
     
     # Crear el buffer para el PDF
     buffer = BytesIO()
