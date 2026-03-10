@@ -971,6 +971,8 @@ def proyecto_edit(request, proyecto_id):
     }
     
     return render(request, 'core/proyectos/edit.html', context)
+
+@login_required
 def proyecto_delete(request, proyecto_id):
     """Eliminar proyecto (desactivar)"""
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
@@ -3281,6 +3283,8 @@ def sistema_ver_respaldos(request):
         logger.error(f'Error al listar respaldos: {e}')
         messages.error(request, f'❌ Error al listar respaldos: {str(e)}')
         return redirect('sistema_configurar')
+
+@login_required
 def sistema_restaurar_respaldo(request, filename):
     """Restaurar respaldo de la base de datos"""
     if not request.user.is_superuser:
@@ -3400,6 +3404,7 @@ def offline_page(request):
     """Página offline para PWA"""
     return render(request, 'offline.html')
 
+@login_required
 def sistema_reset_app(request):
     """Reset completo de la aplicación - SOLO SUPERUSUARIOS"""
     if not request.user.is_superuser:
@@ -8346,6 +8351,7 @@ def api_login(request):
         'success': False,
         'message': 'Método no permitido'
     })
+@login_required
 @api_view()
 def dashboard_data_api(request):
     """API para obtener datos del dashboard en tiempo real"""

@@ -186,9 +186,10 @@ CSRF_COOKIE_SAMESITE = 'Lax'  # Permite cookies en móviles y PWA
 CSRF_COOKIE_HTTPONLY = False  # Necesario para que JavaScript pueda leer el token
 CSRF_USE_SESSIONS = False  # Usar cookies en lugar de sesiones para CSRF
 
-# Si estás en producción con HTTPS, descomenta estas líneas:
-# CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
+# Cookies seguras solo en producción (cuando DEBUG=False y hay HTTPS)
+if not DEBUG:
+    CSRF_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = True
 
 # Configuración de Email para Notificaciones
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
