@@ -3752,16 +3752,16 @@ def rentabilidad_view(request):
             
             tendencias_mensuales.append({
                 'mes': fecha.strftime('%b %Y'),
-                'ingresos': ingresos_mes,
-                'gastos': gastos_mes,
-                'rentabilidad': rentabilidad_mes
+                'ingresos': float(ingresos_mes),
+                'gastos': float(gastos_mes),
+                'rentabilidad': float(rentabilidad_mes)
             })
         
         # Ordenar tendencias cronológicamente
         tendencias_mensuales.reverse()
         
-        # Crear datos JSON para JavaScript
-        tendencias_json = json.dumps(tendencias_mensuales, default=str)
+        # Crear datos JSON para JavaScript (float nativo, sin problemas de locale)
+        tendencias_json = json.dumps(tendencias_mensuales)
         
         # Calcular rentabilidad del mes actual para el dashboard
         mes_actual = hoy.month
@@ -3783,6 +3783,13 @@ def rentabilidad_view(request):
         rentabilidad_mes_actual = ingresos_mes_actual - gastos_mes_actual
         margen_mes_actual = (rentabilidad_mes_actual / ingresos_mes_actual * 100) if ingresos_mes_actual > 0 else Decimal('0.00')
         
+        # JSON con valores numéricos para charts (evita problemas de formato de locale es-gt)
+        chart_totals_json = json.dumps({
+            'ingresos': float(ingresos),
+            'gastos': float(gastos),
+            'rentabilidad_neta': float(rentabilidad_neta),
+        })
+
         context = {
             'periodo': periodo,
             'fecha_inicio': fecha_inicio,
@@ -3798,6 +3805,7 @@ def rentabilidad_view(request):
             'gastos_por_categoria_json': gastos_por_categoria_json,
             'tendencias_mensuales': tendencias_mensuales,
             'tendencias_json': tendencias_json,
+            'chart_totals_json': chart_totals_json,
             # Datos para el dashboard
             'ingresos_mes': ingresos_mes_actual,
             'gastos_mes': gastos_mes_actual,

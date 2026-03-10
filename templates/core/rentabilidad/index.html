@@ -805,9 +805,10 @@ if (ctxLinea && tendenciasData && tendenciasData.length > 0) {
 // Gráfico de dona - Distribución
 const ctxDona = document.getElementById('distribucionChart');
 if (ctxDona) {
-    const ingresos = parseFloat({{ ingresos|default:0 }});
-    const gastos = parseFloat({{ gastos|default:0 }});
-    const rentabilidad = parseFloat({{ rentabilidad_neta|default:0 }});
+    const _chartTotals = {{ chart_totals_json|safe }};
+    const ingresos = _chartTotals.ingresos;
+    const gastos = _chartTotals.gastos;
+    const rentabilidad = _chartTotals.rentabilidad_neta;
     
     console.log('Distribución - Ingresos:', ingresos, 'Gastos:', gastos, 'Rentabilidad:', rentabilidad);
     
