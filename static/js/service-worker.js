@@ -1,10 +1,8 @@
 // Service Worker para Sistema ARCA Construcción
-// Versión: 2.0.0
-// Fecha: 2024
+// Versión: 2.1.0
 
-const CACHE_NAME = 'arca-construccion-v2.0.0';
-const STATIC_CACHE = 'arca-static-v2.0.0';
-const DYNAMIC_CACHE = 'arca-dynamic-v2.0.0';
+const STATIC_CACHE = 'arca-static-v2.1.0';
+const DYNAMIC_CACHE = 'arca-dynamic-v2.1.0';
 
 // Archivos estáticos para cachear
 const STATIC_FILES = [
@@ -18,7 +16,6 @@ const STATIC_FILES = [
     '/static/css/neostructure-enhanced.css',
     '/static/css/user-menu.css',
     '/static/css/toast-notifications.css',
-    '/static/js/pwa-diagnostic.js',
     '/static/js/pwa-register.js',
     '/static/js/dashboard-charts.js',
     '/static/manifest.json',

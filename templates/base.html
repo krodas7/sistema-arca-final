@@ -14,14 +14,14 @@
     <meta name="apple-mobile-web-app-title" content="ARCA Construcción">
     <meta name="msapplication-TileColor" content="#007bff">
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="{% static 'manifest.json' %}?v=2">
+    <!-- PWA Manifest (sin query string para que coincida con la cache del SW) -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
     
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="{% static 'images/icon-192x192.png' %}?v=2">
-    <link rel="apple-touch-icon" sizes="152x152" href="{% static 'images/icon-192x192.png' %}?v=2">
-    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/icon-192x192.png' %}?v=2">
-    <link rel="apple-touch-icon" sizes="167x167" href="{% static 'images/icon-192x192.png' %}?v=2">
+    <!-- Apple Touch Icons (usa el ícono -v2 para consistencia con manifest y SW) -->
+    <link rel="apple-touch-icon" href="{% static 'images/icon-192x192-v2.png' %}">
+    <link rel="apple-touch-icon" sizes="152x152" href="{% static 'images/icon-192x192-v2.png' %}">
+    <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/icon-192x192-v2.png' %}">
+    <link rel="apple-touch-icon" sizes="167x167" href="{% static 'images/icon-192x192-v2.png' %}">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/icon-32x32.png' %}?v=2">

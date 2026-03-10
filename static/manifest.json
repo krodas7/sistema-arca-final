@@ -48,24 +48,6 @@
       "icons": [{ "src": "/static/images/icon-32x32.png?v=2", "sizes": "32x32" }]
     }
   ],
-  "screenshots": [
-    { "src": "/static/images/screenshot-mobile.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow" },
-    { "src": "/static/images/screenshot-desktop.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide" }
-  ],
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "edge_side_panel": { "preferred_width": 400 },
-  "launch_handler": { "client_mode": "navigate-existing" },
-  "protocol_handlers": [ { "protocol": "web+arca", "url": "/dashboard/?action=%s" } ],
-  "file_handlers": [
-    {
-      "action": "/upload/",
-      "accept": {
-        "application/pdf": [".pdf"],
-        "image/*": [".png", ".jpg", ".jpeg", ".gif"],
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
-        "application/vnd.ms-excel": [".xls"],
-        "text/csv": [".csv"]
-      }
-    }
-  ]
+  "launch_handler": { "client_mode": "navigate-existing" }
 }

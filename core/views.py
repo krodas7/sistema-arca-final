@@ -5565,10 +5565,6 @@ def roles_resumen(request):
         return redirect('roles_lista')
 
 
-def offline_page(request):
-    """Página offline para PWA"""
-    return render(request, 'offline.html')
-
 def test_view(request):
     """Vista de prueba para diagnosticar problemas"""
     from django.utils import timezone

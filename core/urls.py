@@ -268,40 +268,17 @@ urlpatterns = [
     
     # PWA Test
     path('pwa-test/', views.pwa_test, name='pwa_test'),
-    
-    # ==================== DASHBOARD INTELIGENTE ====================
-    path('api/dashboard-intelligent-data/', views.dashboard_intelligent_data, name='dashboard_intelligent_data'),
-    path('dashboard-intelligent-analytics/', views.dashboard_intelligent_analytics, name='dashboard_intelligent_analytics'),
-    
-    # ==================== PWA Y OFFLINE ====================
-    path('offline/', views.offline_page, name='offline_page'),
-    
-    # ==================== URL DE PRUEBA ====================
-    path('test/', views.test_view, name='test'),
-    
-    # ==================== NUEVAS RUTAS OPTIMIZADAS ====================
-    # APIs mejoradas
+
+    # ==================== APIs y RUTAS ADICIONALES ====================
     path('api/dashboard-data/', views.dashboard_data_api, name='dashboard_data_api'),
     path('api/dashboard-intelligent-data/', views.dashboard_intelligent_data, name='dashboard_intelligent_data'),
     path('api/login/', views.api_login, name='api_login'),
-    
-    # Vistas mejoradas
     path('dashboard-intelligent-analytics/', views.dashboard_intelligent_analytics, name='dashboard_intelligent_analytics'),
     path('clientes/<int:cliente_id>/toggle-estado/', views.cliente_toggle_estado, name='cliente_toggle_estado'),
     path('clientes/<int:cliente_id>/estadisticas/', views.cliente_estadisticas, name='cliente_estadisticas'),
-    
-    # PWA
-    path('offline/', views.offline_page, name='offline_page'),
-    
-    # ==================== PLANILLAS DE TRABAJADORES DIARIOS ====================
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/', views.planillas_trabajadores_diarios_list, name='planillas_trabajadores_diarios_list'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/crear/', views.planilla_trabajadores_diarios_create, name='planilla_trabajadores_diarios_create'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/', views.planilla_trabajadores_diarios_detail, name='planilla_trabajadores_diarios_detail'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/editar/', views.planilla_trabajadores_diarios_edit, name='planilla_trabajadores_diarios_edit'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/eliminar/', views.planilla_trabajadores_diarios_delete, name='planilla_trabajadores_diarios_delete'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/finalizar/', views.planilla_trabajadores_diarios_finalizar, name='planilla_trabajadores_diarios_finalizar'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/agregar-trabajador/', views.trabajador_diario_add_to_planilla, name='trabajador_diario_add_to_planilla'),
-    path('proyectos/<int:proyecto_id>/planillas-trabajadores-diarios/<int:planilla_id>/remover-trabajador/<int:trabajador_id>/', views.trabajador_diario_remove_from_planilla, name='trabajador_diario_remove_from_planilla'),
+
+    # Test
+    path('test/', views.test_view, name='test'),
 
     # ==================== ASISTENCIAS ====================
     path('asistencias/', views.asistencias_dashboard, name='asistencias_dashboard'),

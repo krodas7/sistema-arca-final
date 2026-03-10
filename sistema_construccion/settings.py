@@ -39,6 +39,9 @@ if not DEBUG:
 
 ALLOWED_HOSTS = ['198.199.123.120', '159.203.106.69', 'construccionesarca.net', 'www.construccionesarca.net', 'instruccionesarca.net', 'www.instruccionesarca.net', 'localhost', '127.0.0.1', '192.168.0.150']
 
+# IPs internas para que el context processor 'debug' funcione en desarrollo local
+INTERNAL_IPS = ['127.0.0.1', 'localhost', '::1']
+
 # Configuración para redirección de www
 USE_WWW_REDIRECT = os.environ.get('USE_WWW_REDIRECT', 'False').lower() == 'true'
 WWW_REDIRECT_TO_NON_WWW = os.environ.get('WWW_REDIRECT_TO_NON_WWW', 'True').lower() == 'true'
