@@ -1787,7 +1787,10 @@ class Asistencia(models.Model):
     fecha = models.DateField(verbose_name="Fecha")
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='presente', verbose_name="Estado")
     hora_entrada = models.TimeField(null=True, blank=True, verbose_name="Hora de Entrada")
+    hora_salida_almuerzo = models.TimeField(null=True, blank=True, verbose_name="Salida a Almuerzo")
+    hora_entrada_almuerzo = models.TimeField(null=True, blank=True, verbose_name="Retorno de Almuerzo")
     hora_salida = models.TimeField(null=True, blank=True, verbose_name="Hora de Salida")
+    horas_laboradas = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, verbose_name="Horas Laboradas")
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
     
     # Auditoría
@@ -1818,15 +1821,34 @@ class Asistencia(models.Model):
     
     @property
     def horas_trabajadas(self):
-        """Calcula las horas trabajadas si hay hora entrada y salida"""
+        """Calcula horas trabajadas descontando almuerzo si aplica"""
+        if self.horas_laboradas is not None:
+            return float(self.horas_laboradas)
         if self.hora_entrada and self.hora_salida:
-            from datetime import datetime, date
-            entrada = datetime.combine(date.today(), self.hora_entrada)
-            salida = datetime.combine(date.today(), self.hora_salida)
-            diff = salida - entrada
-            horas = diff.seconds / 3600
-            return round(horas, 2)
+            from datetime import datetime, date, timedelta
+            hoy = date.today()
+            entrada = datetime.combine(hoy, self.hora_entrada)
+            salida = datetime.combine(hoy, self.hora_salida)
+            total = salida - entrada
+            # Descontar tiempo de almuerzo si ambos registros existen
+            if self.hora_salida_almuerzo and self.hora_entrada_almuerzo:
+                sal_alm = datetime.combine(hoy, self.hora_salida_almuerzo)
+                ent_alm = datetime.combine(hoy, self.hora_entrada_almuerzo)
+                almuerzo = ent_alm - sal_alm
+                total -= almuerzo
+            horas = total.total_seconds() / 3600
+            return round(max(horas, 0), 2)
         return None
+
+    @property
+    def cronometraje_display(self):
+        """Retorna el cronometraje formateado para mostrar"""
+        h = self.horas_trabajadas
+        if h is None:
+            return "—"
+        horas = int(h)
+        minutos = int((h - horas) * 60)
+        return f"{horas}h {minutos:02d}m"
     
     def get_estado_badge_class(self):
         """Retorna clase CSS para el badge del estado"""

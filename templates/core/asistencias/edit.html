@@ -107,14 +107,40 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Hora de Entrada</label>
-                                <input type="time" name="hora_entrada" class="form-control" value="{{ asistencia.hora_entrada|time:'H:i'|default:'' }}">
+                        </div>
+
+                        <!-- Tabla de horario -->
+                        <div class="mt-4">
+                            <label class="form-label fw-bold"><i class="fas fa-clock me-1 text-primary"></i>Registro de Horario</label>
+                            <div class="table-responsive">
+                                <table class="table table-bordered align-middle text-center" style="font-size:0.9rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th><i class="fas fa-sign-in-alt text-success me-1"></i>Entrada</th>
+                                            <th><i class="fas fa-utensils text-warning me-1"></i>Salida Almuerzo</th>
+                                            <th><i class="fas fa-redo text-info me-1"></i>Retorno Almuerzo</th>
+                                            <th><i class="fas fa-sign-out-alt text-danger me-1"></i>Salida</th>
+                                            <th><i class="fas fa-stopwatch text-purple me-1"></i>Horas Laboradas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><input type="time" name="hora_entrada" id="id_hora_entrada" class="form-control form-control-sm text-center" value="{{ asistencia.hora_entrada|time:'H:i'|default:'' }}" onchange="calcularHoras()"></td>
+                                            <td><input type="time" name="hora_salida_almuerzo" id="id_hora_salida_almuerzo" class="form-control form-control-sm text-center" value="{{ asistencia.hora_salida_almuerzo|time:'H:i'|default:'' }}" onchange="calcularHoras()"></td>
+                                            <td><input type="time" name="hora_entrada_almuerzo" id="id_hora_entrada_almuerzo" class="form-control form-control-sm text-center" value="{{ asistencia.hora_entrada_almuerzo|time:'H:i'|default:'' }}" onchange="calcularHoras()"></td>
+                                            <td><input type="time" name="hora_salida" id="id_hora_salida" class="form-control form-control-sm text-center" value="{{ asistencia.hora_salida|time:'H:i'|default:'' }}" onchange="calcularHoras()"></td>
+                                            <td>
+                                                <div id="horas_display" class="fw-bold text-primary fs-5">{{ asistencia.cronometraje_display }}</div>
+                                                <input type="hidden" name="horas_laboradas" id="id_horas_laboradas" value="{{ asistencia.horas_laboradas|default:'' }}">
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Hora de Salida</label>
-                                <input type="time" name="hora_salida" class="form-control" value="{{ asistencia.hora_salida|time:'H:i'|default:'' }}">
-                            </div>
+                            <small class="text-muted"><i class="fas fa-info-circle me-1"></i>El cronometraje se calcula automáticamente descontando el tiempo de almuerzo.</small>
+                        </div>
+
+                        <div class="row g-3 mt-1">
                             <div class="col-md-12">
                                 <label class="form-label">Proyecto (opcional)</label>
                                 <select name="proyecto" class="form-select">
@@ -146,6 +172,29 @@ function togglePersonal() {
     const tipo = document.querySelector('input[name="tipo_personal"]:checked')?.value;
     document.getElementById('section-colaborador').classList.toggle('active', tipo === 'colaborador');
     document.getElementById('section-trabajador').classList.toggle('active', tipo === 'trabajador_diario');
+}
+
+function calcularHoras() {
+    const entrada = document.getElementById('id_hora_entrada').value;
+    const salAlm = document.getElementById('id_hora_salida_almuerzo').value;
+    const entAlm = document.getElementById('id_hora_entrada_almuerzo').value;
+    const salida = document.getElementById('id_hora_salida').value;
+    const display = document.getElementById('horas_display');
+    const hiddenInput = document.getElementById('id_horas_laboradas');
+
+    if (!entrada || !salida) {
+        display.textContent = '—';
+        hiddenInput.value = '';
+        return;
+    }
+    const toMin = t => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+    let total = toMin(salida) - toMin(entrada);
+    if (salAlm && entAlm) total -= (toMin(entAlm) - toMin(salAlm));
+    if (total < 0) total = 0;
+    const horas = Math.floor(total / 60);
+    const minutos = total % 60;
+    display.textContent = `${horas}h ${String(minutos).padStart(2,'0')}m`;
+    hiddenInput.value = parseFloat((total / 60).toFixed(2));
 }
 </script>
 {% endblock %}

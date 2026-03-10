@@ -9002,9 +9002,20 @@ def asistencia_create(request):
         fecha = request.POST.get('fecha')
         estado = request.POST.get('estado', 'presente')
         hora_entrada = request.POST.get('hora_entrada') or None
+        hora_salida_almuerzo = request.POST.get('hora_salida_almuerzo') or None
+        hora_entrada_almuerzo = request.POST.get('hora_entrada_almuerzo') or None
         hora_salida = request.POST.get('hora_salida') or None
+        horas_laboradas_raw = request.POST.get('horas_laboradas') or None
         observaciones = request.POST.get('observaciones', '')
-        
+
+        from decimal import Decimal, InvalidOperation
+        horas_laboradas = None
+        if horas_laboradas_raw:
+            try:
+                horas_laboradas = Decimal(str(horas_laboradas_raw))
+            except InvalidOperation:
+                horas_laboradas = None
+
         # Validaciones básicas
         if not tipo_personal or not fecha or not estado:
             messages.error(request, '❌ Tipo de personal, fecha y estado son obligatorios.')
@@ -9018,7 +9029,10 @@ def asistencia_create(request):
                 fecha=fecha,
                 estado=estado,
                 hora_entrada=hora_entrada,
+                hora_salida_almuerzo=hora_salida_almuerzo,
+                hora_entrada_almuerzo=hora_entrada_almuerzo,
                 hora_salida=hora_salida,
+                horas_laboradas=horas_laboradas,
                 observaciones=observaciones,
                 registrado_por=request.user,
             )
@@ -9069,9 +9083,20 @@ def asistencia_edit(request, asistencia_id):
         fecha = request.POST.get('fecha')
         estado = request.POST.get('estado', 'presente')
         hora_entrada = request.POST.get('hora_entrada') or None
+        hora_salida_almuerzo = request.POST.get('hora_salida_almuerzo') or None
+        hora_entrada_almuerzo = request.POST.get('hora_entrada_almuerzo') or None
         hora_salida = request.POST.get('hora_salida') or None
+        horas_laboradas_raw = request.POST.get('horas_laboradas') or None
         observaciones = request.POST.get('observaciones', '')
-        
+
+        from decimal import Decimal, InvalidOperation
+        horas_laboradas = None
+        if horas_laboradas_raw:
+            try:
+                horas_laboradas = Decimal(str(horas_laboradas_raw))
+            except InvalidOperation:
+                horas_laboradas = None
+
         if not tipo_personal or not fecha or not estado:
             messages.error(request, '❌ Tipo de personal, fecha y estado son obligatorios.')
         else:
@@ -9079,7 +9104,10 @@ def asistencia_edit(request, asistencia_id):
             asistencia.fecha = fecha
             asistencia.estado = estado
             asistencia.hora_entrada = hora_entrada
+            asistencia.hora_salida_almuerzo = hora_salida_almuerzo
+            asistencia.hora_entrada_almuerzo = hora_entrada_almuerzo
             asistencia.hora_salida = hora_salida
+            asistencia.horas_laboradas = horas_laboradas
             asistencia.observaciones = observaciones
             asistencia.proyecto_id = proyecto_id or None
             

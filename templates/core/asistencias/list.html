@@ -175,9 +175,11 @@
                         <th>Proyecto</th>
                         <th>Fecha</th>
                         <th>Estado</th>
-                        <th>Entrada</th>
-                        <th>Salida</th>
-                        <th>Horas</th>
+                        <th><i class="fas fa-sign-in-alt text-success me-1"></i>Entrada</th>
+                        <th><i class="fas fa-utensils text-warning me-1"></i>Sal. Almuerzo</th>
+                        <th><i class="fas fa-redo text-info me-1"></i>Ret. Almuerzo</th>
+                        <th><i class="fas fa-sign-out-alt text-danger me-1"></i>Salida</th>
+                        <th><i class="fas fa-stopwatch text-primary me-1"></i>Horas</th>
                         <th style="text-align:center;">Acciones</th>
                     </tr>
                 </thead>
@@ -196,11 +198,11 @@
                             <span class="badge {{ a.get_estado_badge_class }}">{{ a.get_estado_display }}</span>
                         </td>
                         <td>{{ a.hora_entrada|time:"H:i"|default:"—" }}</td>
+                        <td>{{ a.hora_salida_almuerzo|time:"H:i"|default:"—" }}</td>
+                        <td>{{ a.hora_entrada_almuerzo|time:"H:i"|default:"—" }}</td>
                         <td>{{ a.hora_salida|time:"H:i"|default:"—" }}</td>
                         <td>
-                            {% if a.horas_trabajadas %}
-                                {{ a.horas_trabajadas }}h
-                            {% else %}—{% endif %}
+                            <span class="fw-bold text-primary">{{ a.cronometraje_display }}</span>
                         </td>
                         <td>
                             <div class="action-btns" style="justify-content: center;">
