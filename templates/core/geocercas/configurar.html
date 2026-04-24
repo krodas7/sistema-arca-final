@@ -98,20 +98,33 @@
         <!-- ======= COLUMNA MAPA ======= -->
         <div class="col-lg-7 d-flex flex-column gap-2">
 
-            <!-- Buscador de dirección -->
+            <!-- Pegar enlace de Google Maps -->
             <div class="search-box">
-                <label><i class="fas fa-search me-1 text-primary"></i>Buscar dirección en el mapa</label>
+                <label><i class="fas fa-map me-1 text-danger"></i>Ubicar desde enlace de Google Maps</label>
+                <div class="search-input-group">
+                    <input type="text" id="gmaps-url-input" class="form-control form-control-sm"
+                           placeholder="Pega aquí el enlace de Google Maps...">
+                    <button type="button" class="btn btn-danger btn-sm px-3" onclick="ubicarDesdeGoogleMaps()">
+                        <i class="fas fa-map-pin me-1"></i>Ir
+                    </button>
+                </div>
+                <small class="text-muted mt-1 d-block">
+                    <i class="fas fa-lightbulb me-1 text-warning"></i>
+                    En Google Maps: clic derecho sobre el lugar → <strong>copiar enlace</strong> o copia la URL del navegador y pégala aquí.
+                </small>
+                <div id="gmaps-error" class="mt-1 text-danger" style="font-size:.8rem;display:none;"></div>
+            </div>
+
+            <!-- Buscador de dirección -->
+            <div class="search-box" style="padding-top:.75rem;padding-bottom:.75rem;">
+                <label><i class="fas fa-search me-1 text-primary"></i>O busca por nombre de lugar</label>
                 <div class="search-input-group">
                     <input type="text" id="search-input" class="form-control form-control-sm"
-                           placeholder="Ej: Los Amates, Izabal, Guatemala"
-                           value="Los Amates, Izabal, Guatemala">
+                           placeholder="Ej: Los Amates, Izabal, Guatemala">
                     <button type="button" class="btn btn-primary btn-sm px-3" onclick="buscarDireccion()">
                         <i class="fas fa-search me-1"></i>Buscar
                     </button>
                 </div>
-                <small class="text-muted mt-1 d-block">
-                    Usa el buscador para centrar el mapa en la ubicación. Luego haz clic para colocar la geocerca.
-                </small>
             </div>
 
             <!-- Mapa -->
@@ -203,15 +216,6 @@
                             <div class="d-flex justify-content-between" style="font-size:.75rem;color:#9ca3af;">
                                 <span>20 m</span><span>500 m</span><span>1 km</span><span>2 km</span>
                             </div>
-                        </div>
-                        <!-- Enlace dinámico a Google Maps -->
-                        <div class="mb-3">
-                            <a id="gmaps-link-circle" href="#" target="_blank" class="gmaps-link">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ea4335">
-                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
-                                </svg>
-                                Verificar ubicación en Google Maps
-                            </a>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-save me-1"></i>Guardar geocerca circular
@@ -352,17 +356,8 @@ const radioSlider = document.getElementById('radio-slider');
 const radioLabel  = document.getElementById('radio-label');
 const cLat = document.getElementById('c-lat');
 const cLng = document.getElementById('c-lng');
-const gmapsLinkCircle = document.getElementById('gmaps-link-circle');
-
 function actualizarGmapsLink() {
-    const lat = cLat.value, lng = cLng.value;
-    if (lat && lng) {
-        gmapsLinkCircle.href = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
-        gmapsLinkCircle.style.opacity = '1';
-    } else {
-        gmapsLinkCircle.href = '#';
-        gmapsLinkCircle.style.opacity = '0.5';
-    }
+    // reservado para uso futuro
 }
 
 radioSlider.addEventListener('input', () => {
@@ -440,6 +435,68 @@ map.on('dblclick', e => {
         btn.innerHTML = '<i class="fas fa-save me-1"></i>Guardar polígono';
     }
 });
+
+// ===================== UBICAR DESDE ENLACE GOOGLE MAPS =====================
+function ubicarDesdeGoogleMaps() {
+    const url = document.getElementById('gmaps-url-input').value.trim();
+    const errorDiv = document.getElementById('gmaps-error');
+    errorDiv.style.display = 'none';
+
+    if (!url) {
+        errorDiv.textContent = 'Pega un enlace de Google Maps primero.';
+        errorDiv.style.display = 'block';
+        return;
+    }
+
+    let lat = null, lng = null;
+
+    // Patrón 1: @lat,lng  (URL estándar de Google Maps)
+    // Ej: https://www.google.com/maps/@15.2672,-89.0969,15z
+    let m = url.match(/@(-?\d+\.?\d+),(-?\d+\.?\d+)/);
+    if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+
+    // Patrón 2: q=lat,lng  (enlace directo)
+    // Ej: https://www.google.com/maps?q=15.2672,-89.0969
+    if (!lat) {
+        m = url.match(/[?&]q=(-?\d+\.?\d+),(-?\d+\.?\d+)/);
+        if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    // Patrón 3: ll=lat,lng
+    if (!lat) {
+        m = url.match(/[?&]ll=(-?\d+\.?\d+),(-?\d+\.?\d+)/);
+        if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    // Patrón 4: /place/.../@lat,lng o coordenadas en la ruta
+    // Ej: https://maps.app.goo.gl/... (links cortos — no se puede parsear sin seguir la redirección)
+    if (!lat) {
+        m = url.match(/\/(-?\d+\.?\d+),(-?\d+\.?\d+)/);
+        if (m) { lat = parseFloat(m[1]); lng = parseFloat(m[2]); }
+    }
+
+    if (lat !== null && lng !== null && !isNaN(lat) && !isNaN(lng)) {
+        map.setView([lat, lng], 17);
+
+        // Popup de confirmación
+        L.popup({ maxWidth: 220 })
+         .setLatLng([lat, lng])
+         .setContent(`
+            <div style="font-size:.85rem;">
+                <strong>📍 Ubicación encontrada</strong><br>
+                Lat: <code>${lat.toFixed(6)}</code><br>
+                Lng: <code>${lng.toFixed(6)}</code><br>
+                <small class="text-muted">Haz clic en el mapa para colocar la geocerca aquí</small>
+            </div>`)
+         .openOn(map);
+
+        // Limpiar campo
+        document.getElementById('gmaps-url-input').value = '';
+    } else {
+        errorDiv.textContent = 'No se encontraron coordenadas en el enlace. Copia la URL completa desde el navegador (no el enlace corto goo.gl).';
+        errorDiv.style.display = 'block';
+    }
+}
 
 // ===================== BUSCADOR DE DIRECCIÓN (Nominatim) =====================
 async function buscarDireccion() {
