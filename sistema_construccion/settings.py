@@ -189,6 +189,9 @@ CSRF_COOKIE_SAMESITE = 'Lax'  # Permite cookies en móviles y PWA
 CSRF_COOKIE_HTTPONLY = False  # Necesario para que JavaScript pueda leer el token
 CSRF_USE_SESSIONS = False  # Usar cookies en lugar de sesiones para CSRF
 
+# Configuración proxy SSL — nginx termina HTTPS y reenvía X-Forwarded-Proto
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 # Cookies seguras solo en producción (cuando DEBUG=False y hay HTTPS)
 if not DEBUG:
     CSRF_COOKIE_SECURE = True
