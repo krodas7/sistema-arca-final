@@ -1923,6 +1923,124 @@ class Asistencia(models.Model):
         return clases.get(self.estado, 'bg-secondary')
 
 
+class Permiso(models.Model):
+    """Permiso o ausencia justificada del personal."""
+
+    TIPO_CHOICES = [
+        ('goce',        'Permiso con goce de sueldo'),
+        ('sin_goce',    'Permiso sin goce de sueldo'),
+        ('incapacidad', 'Incapacidad médica'),
+        ('duelo',       'Duelo familiar'),
+        ('paternidad',  'Paternidad / Maternidad'),
+        ('vacaciones',  'Vacaciones'),
+        ('otro',        'Otro'),
+    ]
+    ESTADO_CHOICES = [
+        ('pendiente',  'Pendiente'),
+        ('aprobado',   'Aprobado'),
+        ('rechazado',  'Rechazado'),
+    ]
+    TIPO_PERSONAL_CHOICES = [
+        ('colaborador',      'Colaborador'),
+        ('trabajador_diario','Trabajador Diario'),
+    ]
+
+    tipo_personal = models.CharField(max_length=20, choices=TIPO_PERSONAL_CHOICES,
+                                     verbose_name="Tipo de Personal")
+    colaborador = models.ForeignKey(
+        'Colaborador', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='permisos', verbose_name="Colaborador"
+    )
+    trabajador_diario = models.ForeignKey(
+        'TrabajadorDiario', on_delete=models.CASCADE, null=True, blank=True,
+        related_name='permisos', verbose_name="Trabajador Diario"
+    )
+    proyecto = models.ForeignKey(
+        'Proyecto', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='permisos', verbose_name="Proyecto"
+    )
+
+    tipo         = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name="Tipo de Permiso")
+    fecha_inicio = models.DateField(verbose_name="Fecha de Inicio")
+    fecha_fin    = models.DateField(verbose_name="Fecha de Fin")
+    dias_totales = models.PositiveIntegerField(default=1, verbose_name="Días Solicitados")
+    motivo       = models.TextField(verbose_name="Motivo / Justificación")
+    documento_adjunto = models.CharField(max_length=500, blank=True,
+                                         verbose_name="Referencia de Documento")
+
+    estado              = models.CharField(max_length=20, choices=ESTADO_CHOICES,
+                                           default='pendiente', verbose_name="Estado")
+    aprobado_por        = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='permisos_aprobados', verbose_name="Aprobado / Rechazado por"
+    )
+    fecha_resolucion    = models.DateTimeField(null=True, blank=True,
+                                               verbose_name="Fecha de Resolución")
+    observaciones_resolucion = models.TextField(blank=True,
+                                                verbose_name="Observaciones de Resolución")
+
+    registrado_por   = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True,
+        related_name='permisos_registrados', verbose_name="Registrado por"
+    )
+    fecha_registro   = models.DateTimeField(auto_now_add=True)
+    fecha_actualizacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Permiso'
+        verbose_name_plural = 'Permisos'
+        ordering = ['-fecha_registro']
+
+    def __str__(self):
+        nombre = self.get_nombre_personal()
+        return f"{nombre} — {self.get_tipo_display()} ({self.fecha_inicio} → {self.fecha_fin})"
+
+    def get_nombre_personal(self):
+        if self.colaborador:
+            return self.colaborador.nombre
+        if self.trabajador_diario:
+            return self.trabajador_diario.nombre
+        return "Sin nombre"
+
+    @property
+    def nombre_personal(self):
+        return self.get_nombre_personal()
+
+    def get_estado_badge_class(self):
+        return {
+            'pendiente': 'bg-warning text-dark',
+            'aprobado':  'bg-success',
+            'rechazado': 'bg-danger',
+        }.get(self.estado, 'bg-secondary')
+
+    def get_tipo_badge_color(self):
+        return {
+            'goce':        '#2563eb',
+            'sin_goce':    '#7c3aed',
+            'incapacidad': '#dc2626',
+            'duelo':       '#374151',
+            'paternidad':  '#059669',
+            'vacaciones':  '#0891b2',
+            'otro':        '#6b7280',
+        }.get(self.tipo, '#6b7280')
+
+    def calcular_dias(self):
+        """Recalcula y guarda días totales excluyendo domingos."""
+        from datetime import timedelta
+        dias = 0
+        current = self.fecha_inicio
+        while current <= self.fecha_fin:
+            if current.weekday() != 6:  # excluir domingos
+                dias += 1
+            current += timedelta(days=1)
+        self.dias_totales = max(dias, 1)
+        return self.dias_totales
+
+    def save(self, *args, **kwargs):
+        self.calcular_dias()
+        super().save(*args, **kwargs)
+
+
 class PlanillaLiquidada(models.Model):
     """Modelo para registrar planillas de personal liquidadas"""
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='planillas_liquidadas', verbose_name="Proyecto")
