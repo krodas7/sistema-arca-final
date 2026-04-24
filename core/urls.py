@@ -305,6 +305,13 @@ urlpatterns = [
     path('rekognition/trabajadores/<int:trabajador_id>/registrar/', views.rekognition_registrar, name='rekognition_registrar'),
     path('rekognition/usuarios/<str:user_id>/eliminar/', views.rekognition_eliminar_usuario, name='rekognition_eliminar_usuario'),
 
+    # ==================== Usuarios App Móvil (credenciales de login) ====================
+    path('app-movil/usuarios/', views.app_movil_usuarios, name='app_movil_usuarios'),
+    path('app-movil/usuarios/crear/', views.app_movil_usuario_crear, name='app_movil_usuario_crear'),
+    path('app-movil/usuarios/<str:user_id>/toggle/', views.app_movil_usuario_toggle, name='app_movil_usuario_toggle'),
+    path('app-movil/usuarios/<str:user_id>/reset-password/', views.app_movil_usuario_reset_password, name='app_movil_usuario_reset_password'),
+    path('app-movil/usuarios/<str:user_id>/eliminar/', views.app_movil_usuario_eliminar, name='app_movil_usuario_eliminar'),
+
     # ==================== API v1 — App Móvil Android ====================
     # Solo lectura. No modifican datos existentes.
     path('api/v1/projects/for-app/', views.api_v1_projects_for_app, name='api_v1_projects_for_app'),

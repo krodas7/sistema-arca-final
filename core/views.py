@@ -9720,6 +9720,119 @@ def aws_webhook_registro_usuario(request):
 
 
 # ===========================================================================
+# Gestión de Usuarios App Móvil
+# Crea/gestiona credenciales en AsistenciaAppUsers (DynamoDB).
+# No toca ningún modelo Django existente.
+# ===========================================================================
+
+@login_required
+def app_movil_usuarios(request):
+    """Lista todos los usuarios que pueden iniciar sesión en la app móvil."""
+    from core import aws_service
+
+    usuarios = aws_service.listar_usuarios_app()
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
+
+    # Enriquecer con nombre de proyecto Django
+    proyectos_map = {str(p.id): p.nombre for p in proyectos}
+    for u in usuarios:
+        pid = u.get('projectId', '')
+        u['proyecto_nombre'] = proyectos_map.get(pid, f'Proyecto {pid}' if pid else '—')
+
+    return render(request, 'core/asistencias/app_usuarios.html', {
+        'usuarios': usuarios,
+        'proyectos': proyectos,
+        'total': len(usuarios),
+        'total_activos': sum(1 for u in usuarios if u.get('isActive', True)),
+    })
+
+
+@login_required
+def app_movil_usuario_crear(request):
+    """Crea un nuevo usuario para la app móvil en DynamoDB."""
+    from core import aws_service
+
+    if request.method != 'POST':
+        return redirect('app_movil_usuarios')
+
+    nombre = request.POST.get('nombre', '').strip()
+    email = request.POST.get('email', '').strip()
+    password = request.POST.get('password', '').strip()
+    project_id = request.POST.get('project_id', '').strip()
+
+    if not nombre or not email or not password or not project_id:
+        messages.error(request, '❌ Todos los campos son requeridos.')
+        return redirect('app_movil_usuarios')
+
+    if len(password) < 6:
+        messages.error(request, '❌ La contraseña debe tener al menos 6 caracteres.')
+        return redirect('app_movil_usuarios')
+
+    result = aws_service.crear_usuario_app(nombre, email, password, project_id)
+    if result.get('ok'):
+        messages.success(request, f'✅ Usuario "{nombre}" creado. Ya puede iniciar sesión en la app.')
+        logger.info(f'Usuario app creado: {email} proyecto={project_id} por {request.user}')
+    else:
+        messages.error(request, f'❌ {result.get("error", "Error al crear usuario")}')
+
+    return redirect('app_movil_usuarios')
+
+
+@login_required
+def app_movil_usuario_toggle(request, user_id):
+    """Activa o desactiva un usuario de la app."""
+    from core import aws_service
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    activo_str = request.POST.get('activo', 'true')
+    activo = activo_str.lower() in ('true', '1', 'yes')
+
+    result = aws_service.toggle_activo_usuario_app(user_id, activo)
+    if result.get('ok'):
+        estado = 'activado' if activo else 'desactivado'
+        logger.info(f'Usuario app {user_id} {estado} por {request.user}')
+        return JsonResponse({'ok': True, 'activo': activo})
+    return JsonResponse({'ok': False, 'error': result.get('error', 'Error')})
+
+
+@login_required
+def app_movil_usuario_reset_password(request, user_id):
+    """Restablece la contraseña de un usuario de la app."""
+    from core import aws_service
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    nueva_password = request.POST.get('nueva_password', '').strip()
+    if len(nueva_password) < 6:
+        return JsonResponse({'ok': False, 'error': 'La contraseña debe tener al menos 6 caracteres.'})
+
+    result = aws_service.actualizar_password_usuario_app(user_id, nueva_password)
+    if result.get('ok'):
+        logger.info(f'Password restablecida para usuario app {user_id} por {request.user}')
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False, 'error': result.get('error', 'Error')})
+
+
+@login_required
+def app_movil_usuario_eliminar(request, user_id):
+    """Elimina permanentemente un usuario de la app."""
+    from core import aws_service
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    result = aws_service.eliminar_usuario_app(user_id)
+    if result.get('ok'):
+        messages.success(request, '✅ Usuario eliminado correctamente.')
+        logger.info(f'Usuario app {user_id} eliminado por {request.user}')
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False, 'error': result.get('error', 'Error')})
+
+
+# ===========================================================================
 # API v1 — Endpoints para la App Móvil Android
 # Solo lectura. No modifican ningún dato existente.
 # ===========================================================================

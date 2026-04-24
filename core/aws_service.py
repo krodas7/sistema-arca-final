@@ -2,11 +2,13 @@
 Servicio de integración entre Django y la API AWS de asistencias.
 Centraliza todas las llamadas HTTP a la API Gateway de AWS.
 """
+import hashlib
 import json
 import logging
+import uuid
 import urllib.request
 import urllib.error
-from datetime import datetime
+from datetime import datetime, timezone
 
 from django.conf import settings
 
@@ -193,3 +195,130 @@ def eliminar_usuario_rekognition(user_id: str) -> dict:
 def obtener_usuarios_aws_por_proyecto(project_id: int) -> list:
     """Retorna usuarios registrados en AWS para un proyecto específico."""
     return obtener_usuarios_proyecto(project_id)
+
+
+# ===========================================================================
+# Gestión de Usuarios App Móvil (AsistenciaAppUsers en DynamoDB)
+# Operaciones directas a DynamoDB — no pasan por API Gateway.
+# ===========================================================================
+
+def _dynamo_resource():
+    """Retorna un recurso DynamoDB de boto3 con la región configurada."""
+    try:
+        import boto3
+        return boto3.resource('dynamodb', region_name='us-east-2')
+    except ImportError:
+        logger.error('boto3 no está instalado.')
+        return None
+
+
+def listar_usuarios_app() -> list:
+    """Retorna todos los usuarios de la app desde AsistenciaAppUsers."""
+    dynamodb = _dynamo_resource()
+    if not dynamodb:
+        return []
+    try:
+        table = dynamodb.Table('AsistenciaAppUsers')
+        response = table.scan()
+        usuarios = response.get('Items', [])
+        # Ordenar por nombre
+        return sorted(usuarios, key=lambda u: u.get('name', '').lower())
+    except Exception as e:
+        logger.error(f'Error listando usuarios app: {e}')
+        return []
+
+
+def crear_usuario_app(nombre: str, email: str, password: str, project_id: str) -> dict:
+    """
+    Crea un nuevo usuario en AsistenciaAppUsers.
+    La contraseña se almacena como SHA-256 (igual que el Lambda de login).
+    """
+    dynamodb = _dynamo_resource()
+    if not dynamodb:
+        return {'ok': False, 'error': 'boto3 no disponible'}
+    try:
+        table = dynamodb.Table('AsistenciaAppUsers')
+
+        # Verificar que el email no exista ya
+        response = table.scan(
+            FilterExpression='email = :e',
+            ExpressionAttributeValues={':e': email.strip().lower()}
+        )
+        if response.get('Items'):
+            return {'ok': False, 'error': f'Ya existe un usuario con el email {email}'}
+
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        new_id = str(uuid.uuid4())
+        password_hash = hashlib.sha256(password.encode('utf-8')).hexdigest()
+
+        item = {
+            'userId': new_id,
+            'email': email.strip().lower(),
+            'name': nombre.strip(),
+            'passwordHash': password_hash,
+            'projectId': str(project_id),
+            'isActive': True,
+            'createdAt': now_ms,
+            'updatedAt': now_ms,
+        }
+        table.put_item(Item=item)
+        logger.info(f'Usuario app creado: email={email} projectId={project_id}')
+        return {'ok': True, 'userId': new_id}
+
+    except Exception as e:
+        logger.error(f'Error creando usuario app: {e}')
+        return {'ok': False, 'error': str(e)}
+
+
+def actualizar_password_usuario_app(user_id: str, nueva_password: str) -> dict:
+    """Actualiza la contraseña de un usuario app."""
+    dynamodb = _dynamo_resource()
+    if not dynamodb:
+        return {'ok': False, 'error': 'boto3 no disponible'}
+    try:
+        table = dynamodb.Table('AsistenciaAppUsers')
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        password_hash = hashlib.sha256(nueva_password.encode('utf-8')).hexdigest()
+        table.update_item(
+            Key={'userId': user_id},
+            UpdateExpression='SET passwordHash = :ph, updatedAt = :ua',
+            ExpressionAttributeValues={':ph': password_hash, ':ua': now_ms},
+        )
+        return {'ok': True}
+    except Exception as e:
+        logger.error(f'Error actualizando password usuario app {user_id}: {e}')
+        return {'ok': False, 'error': str(e)}
+
+
+def toggle_activo_usuario_app(user_id: str, activo: bool) -> dict:
+    """Activa o desactiva un usuario app."""
+    dynamodb = _dynamo_resource()
+    if not dynamodb:
+        return {'ok': False, 'error': 'boto3 no disponible'}
+    try:
+        table = dynamodb.Table('AsistenciaAppUsers')
+        now_ms = int(datetime.now(timezone.utc).timestamp() * 1000)
+        table.update_item(
+            Key={'userId': user_id},
+            UpdateExpression='SET isActive = :ia, updatedAt = :ua',
+            ExpressionAttributeValues={':ia': activo, ':ua': now_ms},
+        )
+        return {'ok': True}
+    except Exception as e:
+        logger.error(f'Error actualizando estado usuario app {user_id}: {e}')
+        return {'ok': False, 'error': str(e)}
+
+
+def eliminar_usuario_app(user_id: str) -> dict:
+    """Elimina permanentemente un usuario app de DynamoDB."""
+    dynamodb = _dynamo_resource()
+    if not dynamodb:
+        return {'ok': False, 'error': 'boto3 no disponible'}
+    try:
+        table = dynamodb.Table('AsistenciaAppUsers')
+        table.delete_item(Key={'userId': user_id})
+        logger.info(f'Usuario app eliminado: userId={user_id}')
+        return {'ok': True}
+    except Exception as e:
+        logger.error(f'Error eliminando usuario app {user_id}: {e}')
+        return {'ok': False, 'error': str(e)}
