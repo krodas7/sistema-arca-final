@@ -9837,12 +9837,12 @@ def app_movil_usuario_eliminar(request, user_id):
 # Solo lectura. No modifican ningún dato existente.
 # ===========================================================================
 
-@login_required
 def api_v1_projects_for_app(request):
     """
     GET /api/v1/projects/for-app/
     Retorna la lista de proyectos activos para que la app móvil
     los muestre al trabajador al iniciar sesión.
+    Sin @login_required — el app usa autenticación AWS, no sesión Django.
     Formato esperado por el app: { "results": [{ "id", "name", "code" }] }
     """
     if request.method != 'GET':
