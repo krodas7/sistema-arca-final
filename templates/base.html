@@ -116,17 +116,16 @@
                     </a>
                 </li>
 
-                {% with is_app_section='asistencia' in request.resolver_match.url_name or 'moviles' in request.resolver_match.url_name or 'geocerca' in request.resolver_match.url_name or 'rekognition' in request.resolver_match.url_name or 'app_movil' in request.resolver_match.url_name %}
                 <li class="nav-item has-submenu" id="navGroupApp">
-                    <a class="nav-link nav-group-toggle {% if is_app_section %}active{% endif %}"
+                    <a class="nav-link nav-group-toggle {% if 'asistencia' in request.path or 'geocerca' in request.path or 'rekognition' in request.path or 'app-movil' in request.path %}active{% endif %}"
                        href="#"
                        onclick="toggleNavGroup(event, 'submenuApp')"
-                       aria-expanded="{% if is_app_section %}true{% else %}false{% endif %}">
+                       aria-expanded="{% if 'asistencia' in request.path or 'geocerca' in request.path or 'rekognition' in request.path or 'app-movil' in request.path %}true{% else %}false{% endif %}">
                         <i class="fas fa-satellite-dish"></i>
-                        <span>App & Asistencias</span>
-                        <i class="fas fa-chevron-down nav-chevron ms-auto {% if is_app_section %}rotated{% endif %}"></i>
+                        <span>App &amp; Asistencias</span>
+                        <i class="fas fa-chevron-down nav-chevron ms-auto {% if 'asistencia' in request.path or 'geocerca' in request.path or 'rekognition' in request.path or 'app-movil' in request.path %}rotated{% endif %}"></i>
                     </a>
-                    <ul class="submenu nav flex-column {% if is_app_section %}active{% endif %}" id="submenuApp">
+                    <ul class="submenu nav flex-column {% if 'asistencia' in request.path or 'geocerca' in request.path or 'rekognition' in request.path or 'app-movil' in request.path %}active{% endif %}" id="submenuApp">
                         <li class="nav-item">
                             <a class="nav-link nav-sublink {% if 'asistencia' in request.resolver_match.url_name and 'moviles' not in request.resolver_match.url_name %}active{% endif %}"
                                href="{% url 'asistencias_dashboard' %}">
@@ -157,7 +156,6 @@
                         </li>
                     </ul>
                 </li>
-                {% endwith %}
                 
                 <li class="nav-item">
                     <a class="nav-link {% if 'gastos' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gastos_dashboard' %}">
