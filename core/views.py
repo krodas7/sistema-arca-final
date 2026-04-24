@@ -9956,11 +9956,13 @@ def api_v1_geofences_by_project(request):
         return JsonResponse({'count': 0, 'results': []})
 
     try:
+        # Normalizar: acepta "2", "2.0", 2, 2.0 (Android/Gson convierte int → Double → "2.0")
+        project_id_int = int(float(str(project_id).strip()))
         geo = GeocercaProyecto.objects.select_related('proyecto').get(
-            proyecto_id=int(project_id),
+            proyecto_id=project_id_int,
             activa=True,
         )
-    except (GeocercaProyecto.DoesNotExist, ValueError):
+    except (GeocercaProyecto.DoesNotExist, ValueError, TypeError):
         return JsonResponse({'count': 0, 'results': []})
 
     cfg = geo.configuracion
