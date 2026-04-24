@@ -5,42 +5,54 @@
 <style>
     .page-header {
         background: linear-gradient(135deg, #1e3a5f 0%, #7c3aed 100%);
-        color: white; padding: 2rem; border-radius: 16px; margin-bottom: 2rem;
+        color: white; padding: 2rem; border-radius: 16px; margin-bottom: 1.5rem;
     }
     .page-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 .4rem; }
-    .page-header p { margin: 0; opacity: .85; }
+    .page-header p  { margin: 0; opacity: .85; }
 
-    .stats-row { display: flex; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+    /* Tabs */
+    .tab-bar { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+    .tab-btn {
+        padding: .55rem 1.4rem; border-radius: 9999px; font-size: .9rem; font-weight: 600;
+        border: 2px solid #e5e7eb; background: white; color: #6b7280; cursor: pointer;
+        text-decoration: none; display: inline-flex; align-items: center; gap: .4rem;
+        transition: all .15s;
+    }
+    .tab-btn.active { background: #1e3a5f; border-color: #1e3a5f; color: white; }
+    .tab-btn:hover:not(.active) { border-color: #1e3a5f; color: #1e3a5f; }
+
+    /* Stat pills */
+    .stats-row { display: flex; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
     .stat-pill {
         background: white; border: 1px solid #e5e7eb; border-radius: 12px;
-        padding: .75rem 1.25rem; display: flex; align-items: center; gap: .6rem;
-        font-size: .9rem; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+        padding: .65rem 1.1rem; display: flex; align-items: center; gap: .5rem;
+        font-size: .88rem; font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.05);
     }
-    .stat-pill .dot { width: 12px; height: 12px; border-radius: 50%; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
     .dot-green  { background: #22c55e; }
     .dot-orange { background: #f59e0b; }
     .dot-red    { background: #ef4444; }
 
+    /* Table */
     .card-table { background: white; border-radius: 12px; border: 1px solid #e5e7eb;
         box-shadow: 0 1px 3px rgba(0,0,0,.06); overflow: hidden; }
-    .card-table table { margin: 0; }
     .card-table thead th {
-        background: #f1f5f9; font-size: .78rem; font-weight: 700;
+        background: #f1f5f9; font-size: .77rem; font-weight: 700;
         color: #6b7280; text-transform: uppercase; letter-spacing: .05em;
-        padding: .75rem 1rem; border-bottom: 1px solid #e5e7eb;
+        padding: .7rem 1rem; border-bottom: 1px solid #e5e7eb;
     }
     .card-table tbody td { padding: .8rem 1rem; vertical-align: middle; border-bottom: 1px solid #f1f5f9; }
     .card-table tbody tr:last-child td { border-bottom: none; }
     .card-table tbody tr:hover { background: #f8fafc; }
 
-    .badge-registrado { background: #dcfce7; color: #166534; display: inline-flex; align-items: center; gap: .3rem; padding: .2em .7em; border-radius: 9999px; font-size: .78rem; font-weight: 600; }
-    .badge-pendiente  { background: #fef3c7; color: #92400e; display: inline-flex; align-items: center; gap: .3rem; padding: .2em .7em; border-radius: 9999px; font-size: .78rem; font-weight: 600; }
+    .badge-reg { background:#dcfce7; color:#166534; display:inline-flex; align-items:center; gap:.3rem; padding:.2em .7em; border-radius:9999px; font-size:.77rem; font-weight:600; }
+    .badge-pen { background:#fef3c7; color:#92400e; display:inline-flex; align-items:center; gap:.3rem; padding:.2em .7em; border-radius:9999px; font-size:.77rem; font-weight:600; }
 
-    /* Modal de cámara */
-    #camera-preview { width: 100%; max-width: 400px; border-radius: 12px; }
-    #canvas-capture { display: none; }
-    .foto-thumb { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid #22c55e; }
-    .alert-aws { background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; padding: 1rem 1.25rem; margin-bottom: 1.5rem; }
+    /* Camera */
+    #camera-preview { width:100%; max-width:400px; border-radius:12px; }
+    #canvas-capture { display:none; }
+    .foto-thumb { width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid #22c55e; }
+    .alert-aws { background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:1rem 1.25rem; margin-bottom:1.25rem; }
 </style>
 {% endblock %}
 
@@ -52,7 +64,7 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h1><i class="fas fa-user-check me-2"></i>Registro Facial — App Móvil</h1>
-                <p>Registra la foto de cada trabajador para que pueda usar el reconocimiento facial en la app</p>
+                <p>Registra la foto de cada persona para el reconocimiento facial en la app</p>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <a href="{% url 'geocercas_list' %}" class="btn btn-light btn-sm">
@@ -68,88 +80,87 @@
     {% if error_aws %}
     <div class="alert-aws">
         <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-        <strong>No se pudo conectar con AWS.</strong> Revisa la configuración de <code>AWS_API_BASE_URL</code> en el servidor.
+        <strong>No se pudo conectar con AWS.</strong> Revisa la configuración de <code>AWS_API_BASE_URL</code>.
     </div>
     {% endif %}
 
     {% if messages %}
-    {% for message in messages %}
-    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-        {{ message }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show" role="alert">
+        {{ msg }} <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {% endfor %}
     {% endif %}
 
-    <!-- Stats -->
-    <div class="stats-row">
-        <div class="stat-pill">
-            <span class="dot dot-green"></span>
-            {{ total_registrados }} registrado{{ total_registrados|pluralize }} en AWS
-        </div>
-        <div class="stat-pill">
-            <span class="dot dot-orange"></span>
-            {{ total_pendientes }} pendiente{{ total_pendientes|pluralize }}
-        </div>
+    <!-- Tabs -->
+    <div class="tab-bar">
+        <a href="?tab=trabajadores{% if proyecto_filtro_id %}&proyecto_id={{ proyecto_filtro_id }}{% endif %}"
+           class="tab-btn {% if tab_activo == 'trabajadores' %}active{% endif %}">
+            <i class="fas fa-user-clock"></i>
+            Trabajadores Diarios
+            <span class="badge {% if tab_activo == 'trabajadores' %}bg-light text-dark{% else %}bg-secondary{% endif %} ms-1">{{ trabajadores_data|length }}</span>
+        </a>
+        <a href="?tab=colaboradores"
+           class="tab-btn {% if tab_activo == 'colaboradores' %}active{% endif %}">
+            <i class="fas fa-users"></i>
+            Colaboradores
+            <span class="badge {% if tab_activo == 'colaboradores' %}bg-light text-dark{% else %}bg-secondary{% endif %} ms-1">{{ colaboradores_data|length }}</span>
+        </a>
     </div>
 
-    <!-- Filtro por proyecto -->
+    <!-- ═══════════════════ PESTAÑA TRABAJADORES ═══════════════════ -->
+    {% if tab_activo == 'trabajadores' %}
+
+    <div class="stats-row">
+        <div class="stat-pill"><span class="dot dot-green"></span>{{ total_registrados }} registrado{{ total_registrados|pluralize }}</div>
+        <div class="stat-pill"><span class="dot dot-orange"></span>{{ total_pendientes }} pendiente{{ total_pendientes|pluralize }}</div>
+    </div>
+
+    <!-- Filtro proyecto -->
     <form method="get" class="d-flex gap-2 mb-3 flex-wrap">
-        <select name="proyecto_id" class="form-select form-select-sm" style="max-width:280px;">
+        <input type="hidden" name="tab" value="trabajadores">
+        <select name="proyecto_id" class="form-select form-select-sm" style="max-width:280px;" onchange="this.form.submit()">
             <option value="">— Todos los proyectos —</option>
             {% for p in proyectos_activos %}
             <option value="{{ p.id }}" {% if proyecto_filtro_id == p.id %}selected{% endif %}>{{ p.nombre }}</option>
             {% endfor %}
         </select>
-        <button type="submit" class="btn btn-sm btn-primary">Filtrar</button>
-        {% if proyecto_filtro_id %}<a href="{% url 'rekognition_trabajadores' %}" class="btn btn-sm btn-outline-secondary">Limpiar</a>{% endif %}
+        {% if proyecto_filtro_id %}
+        <a href="?tab=trabajadores" class="btn btn-sm btn-outline-secondary">Limpiar</a>
+        {% endif %}
     </form>
 
-    <!-- Tabla -->
     <div class="card-table">
         <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Trabajador</th>
-                    <th>Proyecto</th>
-                    <th>Estado AWS</th>
-                    <th>Foto</th>
-                    <th class="text-end">Acciones</th>
-                </tr>
-            </thead>
+            <thead><tr>
+                <th>Trabajador</th><th>Proyecto</th><th>Estado</th><th>Foto</th><th class="text-end">Acciones</th>
+            </tr></thead>
             <tbody>
                 {% for item in trabajadores_data %}
-                <tr id="row-{{ item.trabajador.id }}">
+                <tr id="row-t-{{ item.trabajador.id }}">
                     <td>
                         <div class="fw-semibold">{{ item.trabajador.nombre }}</div>
                         <small class="text-muted">ID: {{ item.trabajador.id }}</small>
                     </td>
+                    <td><small>{{ item.trabajador.proyecto.nombre }}</small></td>
                     <td>
-                        <small>{{ item.trabajador.proyecto.nombre }}</small>
+                        {% if item.registrado_aws %}<span class="badge-reg"><i class="fas fa-check-circle"></i> Registrado</span>
+                        {% else %}<span class="badge-pen"><i class="fas fa-clock"></i> Pendiente</span>{% endif %}
                     </td>
                     <td>
-                        {% if item.registrado_aws %}
-                        <span class="badge-registrado"><i class="fas fa-check-circle"></i> Registrado</span>
-                        {% else %}
-                        <span class="badge-pendiente"><i class="fas fa-clock"></i> Pendiente</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        {% if item.foto_url %}
-                        <img src="{{ item.foto_url }}" class="foto-thumb" alt="foto">
-                        {% else %}
-                        <span class="text-muted small">—</span>
-                        {% endif %}
+                        {% if item.foto_url %}<img src="{{ item.foto_url }}" class="foto-thumb" alt="foto">
+                        {% else %}<span class="text-muted small">—</span>{% endif %}
                     </td>
                     <td class="text-end">
                         <div class="d-flex gap-2 justify-content-end flex-wrap">
                             <button class="btn btn-sm btn-primary py-1 px-3"
-                                    onclick="abrirCamara({{ item.trabajador.id }}, '{{ item.trabajador.nombre|escapejs }}', {{ item.trabajador.proyecto_id }})">
+                                    onclick="abrirCamaraTrabajador({{ item.trabajador.id }}, '{{ item.trabajador.nombre|escapejs }}')">
                                 <i class="fas fa-camera me-1"></i>
-                                {% if item.registrado_aws %}Actualizar foto{% else %}Registrar foto{% endif %}
+                                {% if item.registrado_aws %}Actualizar{% else %}Registrar{% endif %}
                             </button>
                             {% if item.registrado_aws and item.aws_user_id %}
                             <button class="btn btn-sm btn-outline-danger py-1 px-2"
-                                    onclick="eliminarRegistro('{{ item.aws_user_id|escapejs }}', '{{ item.trabajador.nombre|escapejs }}', {{ item.trabajador.id }})"
+                                    onclick="eliminarRegistro('{{ item.aws_user_id|escapejs }}', '{{ item.trabajador.nombre|escapejs }}', 't', {{ item.trabajador.id }})"
                                     title="Eliminar de AWS">
                                 <i class="fas fa-trash"></i>
                             </button>
@@ -163,9 +174,65 @@
             </tbody>
         </table>
     </div>
+
+    <!-- ═══════════════════ PESTAÑA COLABORADORES ═══════════════════ -->
+    {% else %}
+
+    <div class="stats-row">
+        <div class="stat-pill"><span class="dot dot-green"></span>{{ total_col_registrados }} registrado{{ total_col_registrados|pluralize }}</div>
+        <div class="stat-pill"><span class="dot dot-orange"></span>{{ total_col_pendientes }} pendiente{{ total_col_pendientes|pluralize }}</div>
+    </div>
+
+    <div class="card-table">
+        <table class="table table-hover mb-0">
+            <thead><tr>
+                <th>Colaborador</th><th>DPI</th><th>Email</th><th>Estado</th><th>Foto</th><th class="text-end">Acciones</th>
+            </tr></thead>
+            <tbody>
+                {% for item in colaboradores_data %}
+                <tr id="row-c-{{ item.colaborador.id }}">
+                    <td>
+                        <div class="fw-semibold">{{ item.colaborador.nombre }}</div>
+                        <small class="text-muted">ID: {{ item.colaborador.id }}</small>
+                    </td>
+                    <td><small class="text-muted">{{ item.colaborador.dpi|default:"—" }}</small></td>
+                    <td><small class="text-muted">{{ item.colaborador.email|default:"—" }}</small></td>
+                    <td>
+                        {% if item.registrado_aws %}<span class="badge-reg"><i class="fas fa-check-circle"></i> Registrado</span>
+                        {% else %}<span class="badge-pen"><i class="fas fa-clock"></i> Pendiente</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if item.foto_url %}<img src="{{ item.foto_url }}" class="foto-thumb" alt="foto">
+                        {% else %}<span class="text-muted small">—</span>{% endif %}
+                    </td>
+                    <td class="text-end">
+                        <div class="d-flex gap-2 justify-content-end flex-wrap">
+                            <button class="btn btn-sm btn-primary py-1 px-3"
+                                    onclick="abrirCamaraColaborador({{ item.colaborador.id }}, '{{ item.colaborador.nombre|escapejs }}')">
+                                <i class="fas fa-camera me-1"></i>
+                                {% if item.registrado_aws %}Actualizar{% else %}Registrar{% endif %}
+                            </button>
+                            {% if item.registrado_aws and item.aws_user_id %}
+                            <button class="btn btn-sm btn-outline-danger py-1 px-2"
+                                    onclick="eliminarRegistro('{{ item.aws_user_id|escapejs }}', '{{ item.colaborador.nombre|escapejs }}', 'c', {{ item.colaborador.id }})"
+                                    title="Eliminar de AWS">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="6" class="text-center text-muted py-4">No hay colaboradores activos.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% endif %}
 </div>
 
-<!-- Modal Cámara -->
+<!-- ═══ Modal Cámara ═══ -->
 <div class="modal fade" id="modalCamara" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
@@ -174,9 +241,22 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" onclick="detenerCamara()"></button>
             </div>
             <div class="modal-body text-center">
+                <!-- Selector de proyecto (solo para colaboradores) -->
+                <div id="proyecto-selector" class="d-none mb-3 text-start">
+                    <label class="form-label fw-semibold small">Proyecto para asociar en la app</label>
+                    <select id="modal-proyecto-id" class="form-select form-select-sm">
+                        <option value="">— Selecciona un proyecto —</option>
+                        {% for p in proyectos_activos %}
+                        <option value="{{ p.id }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Define en qué proyecto marcará asistencia este colaborador.</div>
+                </div>
+
                 <video id="camera-preview" autoplay playsinline></video>
                 <canvas id="canvas-capture"></canvas>
-                <img id="foto-preview" class="d-none" style="width:100%; max-width:400px; border-radius:12px;" alt="foto capturada">
+                <img id="foto-preview" class="d-none" style="width:100%;max-width:400px;border-radius:12px;" alt="foto">
+
                 <div class="mt-3 d-flex gap-2 justify-content-center" id="btn-captura">
                     <button class="btn btn-primary" onclick="capturarFoto()">
                         <i class="fas fa-camera me-1"></i>Capturar
@@ -195,20 +275,32 @@
         </div>
     </div>
 </div>
-
 {% endblock %}
 
 {% block extra_js %}
 <script>
 let stream = null;
 let fotoBase64 = '';
-let trabajadorActivo = null;
-let proyectoActivo = null;
-const CSRF_TOKEN = '{{ csrf_token }}';
+let entidadActiva = null;   // { id, tipo: 'trabajador'|'colaborador', nombre }
+const CSRF = '{{ csrf_token }}';
 
-function abrirCamara(trabajadorId, nombre, proyectoId) {
-    trabajadorActivo = trabajadorId;
-    proyectoActivo = proyectoId;
+// ── Abrir cámara Trabajador ──────────────────────────────────────────
+function abrirCamaraTrabajador(id, nombre) {
+    entidadActiva = { id, tipo: 'trabajador', nombre };
+    document.getElementById('proyecto-selector').classList.add('d-none');
+    document.getElementById('modal-proyecto-id').value = '';
+    abrirModal(nombre);
+}
+
+// ── Abrir cámara Colaborador ─────────────────────────────────────────
+function abrirCamaraColaborador(id, nombre) {
+    entidadActiva = { id, tipo: 'colaborador', nombre };
+    document.getElementById('proyecto-selector').classList.remove('d-none');
+    document.getElementById('modal-proyecto-id').value = '';
+    abrirModal(nombre);
+}
+
+function abrirModal(nombre) {
     document.getElementById('modal-nombre').textContent = nombre;
     document.getElementById('foto-preview').classList.add('d-none');
     document.getElementById('camera-preview').classList.remove('d-none');
@@ -217,14 +309,10 @@ function abrirCamara(trabajadorId, nombre, proyectoId) {
     document.getElementById('msg-resultado').innerHTML = '';
     fotoBase64 = '';
 
-    const modal = new bootstrap.Modal(document.getElementById('modalCamara'));
-    modal.show();
+    new bootstrap.Modal(document.getElementById('modalCamara')).show();
 
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-        .then(s => {
-            stream = s;
-            document.getElementById('camera-preview').srcObject = s;
-        })
+        .then(s => { stream = s; document.getElementById('camera-preview').srcObject = s; })
         .catch(e => {
             document.getElementById('msg-resultado').innerHTML =
                 `<div class="alert alert-warning">No se pudo acceder a la cámara: ${e.message}</div>`;
@@ -232,16 +320,13 @@ function abrirCamara(trabajadorId, nombre, proyectoId) {
 }
 
 function detenerCamara() {
-    if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
-    }
+    if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
 }
 
 function capturarFoto() {
-    const video = document.getElementById('camera-preview');
+    const video  = document.getElementById('camera-preview');
     const canvas = document.getElementById('canvas-capture');
-    canvas.width = video.videoWidth || 640;
+    canvas.width  = video.videoWidth  || 640;
     canvas.height = video.videoHeight || 480;
     canvas.getContext('2d').drawImage(video, 0, 0);
     fotoBase64 = canvas.toDataURL('image/jpeg', 0.85);
@@ -261,73 +346,89 @@ function reintentar() {
     document.getElementById('btn-captura').classList.remove('d-none');
     document.getElementById('btn-confirmar').classList.add('d-none');
     document.getElementById('msg-resultado').innerHTML = '';
-
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-        .then(s => {
-            stream = s;
-            document.getElementById('camera-preview').srcObject = s;
-        });
+        .then(s => { stream = s; document.getElementById('camera-preview').srcObject = s; });
 }
 
 function confirmarFoto() {
-    if (!fotoBase64 || !trabajadorActivo) return;
+    if (!fotoBase64 || !entidadActiva) return;
+
+    // Validar proyecto para colaboradores
+    if (entidadActiva.tipo === 'colaborador') {
+        const pid = document.getElementById('modal-proyecto-id').value;
+        if (!pid) {
+            document.getElementById('msg-resultado').innerHTML =
+                '<div class="alert alert-warning py-2">Selecciona un proyecto antes de guardar.</div>';
+            return;
+        }
+    }
+
     const btn = document.getElementById('btn-guardar');
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
 
     const fd = new FormData();
     fd.append('foto_base64', fotoBase64);
-    fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+    fd.append('csrfmiddlewaretoken', CSRF);
 
-    fetch(`/rekognition/trabajadores/${trabajadorActivo}/registrar/`, {
-        method: 'POST',
-        body: fd,
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.ok) {
-            document.getElementById('msg-resultado').innerHTML =
-                `<div class="alert alert-success"><i class="fas fa-check-circle me-1"></i>${data.nombre} registrado correctamente en AWS.</div>`;
-            btn.innerHTML = '<i class="fas fa-check me-1"></i>Guardado';
-            // Actualizar badge en la tabla sin recargar
-            const row = document.getElementById(`row-${trabajadorActivo}`);
-            if (row) {
-                const badgeCell = row.querySelector('td:nth-child(3)');
-                if (badgeCell) badgeCell.innerHTML = '<span class="badge-registrado"><i class="fas fa-check-circle"></i> Registrado</span>';
+    let url;
+    if (entidadActiva.tipo === 'trabajador') {
+        url = `/rekognition/trabajadores/${entidadActiva.id}/registrar/`;
+    } else {
+        const pid = document.getElementById('modal-proyecto-id').value;
+        fd.append('project_id', pid);
+        url = `/rekognition/colaboradores/${entidadActiva.id}/registrar/`;
+    }
+
+    fetch(url, { method: 'POST', body: fd })
+        .then(r => r.json())
+        .then(data => {
+            if (data.ok) {
+                document.getElementById('msg-resultado').innerHTML =
+                    `<div class="alert alert-success"><i class="fas fa-check-circle me-1"></i>${data.nombre} registrado correctamente en AWS.</div>`;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>Guardado';
+
+                // Actualizar badge en la tabla sin recargar
+                const prefix = entidadActiva.tipo === 'trabajador' ? 't' : 'c';
+                const row = document.getElementById(`row-${prefix}-${entidadActiva.id}`);
+                if (row) {
+                    const badge = row.querySelector('td:nth-child({% if tab_activo == "trabajadores" %}3{% else %}4{% endif %})');
+                    if (badge) badge.innerHTML = '<span class="badge-reg"><i class="fas fa-check-circle"></i> Registrado</span>';
+                }
+                setTimeout(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('modalCamara')).hide();
+                }, 1800);
+            } else {
+                document.getElementById('msg-resultado').innerHTML =
+                    `<div class="alert alert-danger"><i class="fas fa-times-circle me-1"></i>${data.error}</div>`;
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i>Guardar en AWS';
             }
-            setTimeout(() => {
-                bootstrap.Modal.getInstance(document.getElementById('modalCamara')).hide();
-            }, 1800);
-        } else {
+        })
+        .catch(() => {
             document.getElementById('msg-resultado').innerHTML =
-                `<div class="alert alert-danger"><i class="fas fa-times-circle me-1"></i>${data.error}</div>`;
+                '<div class="alert alert-danger">Error de conexión.</div>';
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-check me-1"></i>Guardar en AWS';
-        }
-    })
-    .catch(() => {
-        document.getElementById('msg-resultado').innerHTML =
-            '<div class="alert alert-danger">Error de conexión.</div>';
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check me-1"></i>Guardar en AWS';
-    });
+        });
 }
 
-function eliminarRegistro(userId, nombre, trabajadorId) {
-    if (!confirm(`¿Eliminar el registro facial de "${nombre}" en AWS? Esta acción no puede deshacerse.`)) return;
-
+function eliminarRegistro(userId, nombre, tipo, entidadId) {
+    if (!confirm(`¿Eliminar el registro facial de "${nombre}" en AWS?`)) return;
     const fd = new FormData();
-    fd.append('csrfmiddlewaretoken', CSRF_TOKEN);
+    fd.append('csrfmiddlewaretoken', CSRF);
 
     fetch(`/rekognition/usuarios/${userId}/eliminar/`, { method: 'POST', body: fd })
         .then(r => r.json())
         .then(data => {
             if (data.ok) {
-                const row = document.getElementById(`row-${trabajadorId}`);
+                const prefix = tipo === 't' ? 't' : 'c';
+                const row = document.getElementById(`row-${prefix}-${entidadId}`);
                 if (row) {
-                    const badgeCell = row.querySelector('td:nth-child(3)');
-                    if (badgeCell) badgeCell.innerHTML = '<span class="badge-pendiente"><i class="fas fa-clock"></i> Pendiente</span>';
-                    const fotoCell = row.querySelector('td:nth-child(4)');
+                    const colIdx = tipo === 't' ? 3 : 4;
+                    const badge = row.querySelector(`td:nth-child(${colIdx})`);
+                    if (badge) badge.innerHTML = '<span class="badge-pen"><i class="fas fa-clock"></i> Pendiente</span>';
+                    const fotoCell = row.querySelector(`td:nth-child(${colIdx + 1})`);
                     if (fotoCell) fotoCell.innerHTML = '<span class="text-muted small">—</span>';
                 }
             } else {
@@ -336,7 +437,6 @@ function eliminarRegistro(userId, nombre, trabajadorId) {
         });
 }
 
-// Detener cámara al cerrar el modal
 document.getElementById('modalCamara').addEventListener('hidden.bs.modal', detenerCamara);
 </script>
 {% endblock %}

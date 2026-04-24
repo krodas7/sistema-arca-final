@@ -303,6 +303,7 @@ urlpatterns = [
     # Rekognition - Registro de trabajadores en AWS (solo lectura de TrabajadorDiario)
     path('rekognition/trabajadores/', views.rekognition_trabajadores, name='rekognition_trabajadores'),
     path('rekognition/trabajadores/<int:trabajador_id>/registrar/', views.rekognition_registrar, name='rekognition_registrar'),
+    path('rekognition/colaboradores/<int:colaborador_id>/registrar/', views.rekognition_registrar_colaborador, name='rekognition_registrar_colaborador'),
     path('rekognition/usuarios/<str:user_id>/eliminar/', views.rekognition_eliminar_usuario, name='rekognition_eliminar_usuario'),
 
     # ==================== Usuarios App Móvil (credenciales de login) ====================

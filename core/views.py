@@ -9586,18 +9586,20 @@ def geocerca_proyecto_guardar(request, proyecto_id):
 
 @login_required
 def rekognition_trabajadores(request):
-    """Lista trabajadores de todos los proyectos y su estado de registro en AWS Rekognition."""
+    """Lista trabajadores Y colaboradores con su estado en AWS Rekognition. Dos pestañas."""
     from core import aws_service
     from core.models import TrabajadorDiario
 
-    # Obtener todos los usuarios registrados en AWS (sin modificar TrabajadorDiario)
+    tab_activo = request.GET.get('tab', 'trabajadores')  # 'trabajadores' | 'colaboradores'
+    proyecto_filtro_id = request.GET.get('proyecto_id')
+
+    # Usuarios registrados en AWS (una sola llamada, usada en ambas pestañas)
     usuarios_aws = aws_service.obtener_todos_usuarios()
     nombres_aws = {u.get('name', '').strip().lower(): u for u in usuarios_aws}
 
     proyectos_activos = Proyecto.objects.filter(activo=True).order_by('nombre')
-    proyecto_filtro_id = request.GET.get('proyecto_id')
-    
-    # Solo leer trabajadores, nunca modificarlos
+
+    # ── Pestaña Trabajadores Diarios ──────────────────────────────────────
     trabajadores_qs = TrabajadorDiario.objects.filter(activo=True).select_related('proyecto').order_by('proyecto__nombre', 'nombre')
     if proyecto_filtro_id:
         trabajadores_qs = trabajadores_qs.filter(proyecto_id=proyecto_filtro_id)
@@ -9608,21 +9610,39 @@ def rekognition_trabajadores(request):
         trabajadores_data.append({
             'trabajador': t,
             'registrado_aws': aws_user is not None,
-            'aws_user': aws_user,
             'aws_user_id': aws_user.get('userId') if aws_user else None,
             'foto_url': aws_user.get('photoUrl') if aws_user else None,
         })
 
-    total_registrados = sum(1 for td in trabajadores_data if td['registrado_aws'])
-    total_pendientes = len(trabajadores_data) - total_registrados
+    # ── Pestaña Colaboradores ─────────────────────────────────────────────
+    colaboradores_qs = Colaborador.objects.filter(activo=True).order_by('nombre')
+    colaboradores_data = []
+    for c in colaboradores_qs:
+        aws_user = nombres_aws.get(c.nombre.strip().lower())
+        colaboradores_data.append({
+            'colaborador': c,
+            'registrado_aws': aws_user is not None,
+            'aws_user_id': aws_user.get('userId') if aws_user else None,
+            'foto_url': aws_user.get('photoUrl') if aws_user else None,
+        })
+
+    # Totales globales para las pills
+    total_t_reg = sum(1 for td in trabajadores_data if td['registrado_aws'])
+    total_c_reg = sum(1 for cd in colaboradores_data if cd['registrado_aws'])
 
     return render(request, 'core/rekognition/trabajadores.html', {
+        'tab_activo': tab_activo,
         'trabajadores_data': trabajadores_data,
+        'colaboradores_data': colaboradores_data,
         'proyectos_activos': proyectos_activos,
         'proyecto_filtro_id': int(proyecto_filtro_id) if proyecto_filtro_id else None,
-        'total_registrados': total_registrados,
-        'total_pendientes': total_pendientes,
-        'error_aws': len(usuarios_aws) == 0 and TrabajadorDiario.objects.filter(activo=True).exists(),
+        # Trabajadores
+        'total_registrados': total_t_reg,
+        'total_pendientes': len(trabajadores_data) - total_t_reg,
+        # Colaboradores
+        'total_col_registrados': total_c_reg,
+        'total_col_pendientes': len(colaboradores_data) - total_c_reg,
+        'error_aws': len(usuarios_aws) == 0,
     })
 
 
@@ -9662,6 +9682,50 @@ def rekognition_registrar(request, trabajador_id):
     else:
         err = result.get('error', 'Error desconocido')
         logger.error(f'Error registrando {trabajador.nombre} en Rekognition: {err}')
+        return JsonResponse({'ok': False, 'error': err})
+
+
+@login_required
+def rekognition_registrar_colaborador(request, colaborador_id):
+    """
+    Registra la foto de un Colaborador en AWS Rekognition.
+    No modifica el modelo Colaborador ni ningún dato Django.
+    El usuario elige el proyecto en el modal antes de capturar.
+    """
+    from core import aws_service
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    colaborador = get_object_or_404(Colaborador, id=colaborador_id, activo=True)
+
+    foto_data = request.POST.get('foto_base64', '')
+    project_id = request.POST.get('project_id', '').strip()
+
+    if not foto_data:
+        return JsonResponse({'ok': False, 'error': 'No se recibió foto.'})
+    if not project_id:
+        return JsonResponse({'ok': False, 'error': 'Debes seleccionar un proyecto.'})
+
+    if ',' in foto_data:
+        foto_data = foto_data.split(',', 1)[1]
+
+    result = aws_service.registrar_usuario_rekognition(
+        nombre=colaborador.nombre,
+        project_id=int(project_id),
+        foto_base64=foto_data,
+        email=colaborador.email or '',
+    )
+
+    if result.get('ok'):
+        data = result.get('data', {})
+        if isinstance(data, dict) and 'data' in data:
+            data = data['data']
+        logger.info(f'Colaborador {colaborador.nombre} registrado en Rekognition. userId={data.get("userId")} proyecto={project_id} por {request.user}')
+        return JsonResponse({'ok': True, 'userId': data.get('userId'), 'nombre': colaborador.nombre})
+    else:
+        err = result.get('error', 'Error desconocido')
+        logger.error(f'Error registrando colaborador {colaborador.nombre} en Rekognition: {err}')
         return JsonResponse({'ok': False, 'error': err})
 
 
