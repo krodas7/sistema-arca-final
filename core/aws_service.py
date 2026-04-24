@@ -168,3 +168,28 @@ def obtener_todos_usuarios() -> list:
     if result['ok'] and isinstance(result['data'], dict):
         return result['data'].get('data', [])
     return []
+
+
+def registrar_usuario_rekognition(nombre: str, project_id: int, foto_base64: str, email: str = '') -> dict:
+    """
+    Registra un trabajador en AWS Rekognition + DynamoDB.
+    foto_base64: imagen en base64 (sin prefijo data:image/...;base64,)
+    """
+    body = {
+        'name': nombre,
+        'projectId': str(project_id),
+        'photoBase64': foto_base64,
+    }
+    if email:
+        body['email'] = email
+    return _request('POST', '/registerUser', body)
+
+
+def eliminar_usuario_rekognition(user_id: str) -> dict:
+    """Elimina un usuario de AWS Rekognition + DynamoDB."""
+    return _request('DELETE', f'/users/{user_id}')
+
+
+def obtener_usuarios_aws_por_proyecto(project_id: int) -> list:
+    """Retorna usuarios registrados en AWS para un proyecto específico."""
+    return obtener_usuarios_proyecto(project_id)

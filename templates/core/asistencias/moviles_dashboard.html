@@ -140,6 +140,12 @@
                     {{ total_registros }} marca{{ total_registros|pluralize }}
                 </span>
             </div>
+            <div class="col-auto d-flex align-items-end">
+                <a href="{% url 'asistencias_moviles_pdf' %}?proyecto={{ proyecto_sel.id }}{% if fecha_filtro %}&fecha={{ fecha_filtro }}{% endif %}"
+                   class="btn btn-outline-danger" target="_blank" title="Exportar a PDF">
+                    <i class="fas fa-file-pdf me-1"></i>PDF
+                </a>
+            </div>
             {% endif %}
         </form>
     </div>

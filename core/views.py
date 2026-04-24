@@ -23,7 +23,8 @@ from .models import (
     ItemInventario, CategoriaInventario, AsignacionInventario,
     Rol, PerfilUsuario, Modulo, Permiso, RolPermiso, AnticipoProyecto,
     CarpetaProyecto, ConfiguracionSistema, EventoCalendario,
-    TrabajadorDiario, RegistroTrabajo, AnticipoTrabajadorDiario, PlanillaLiquidada, PlanillaTrabajadoresDiarios
+    TrabajadorDiario, RegistroTrabajo, AnticipoTrabajadorDiario, PlanillaLiquidada, PlanillaTrabajadoresDiarios,
+    GeocercaProyecto,
 )
 from .forms_simple import (
     ClienteForm, ProyectoForm, ColaboradorForm, FacturaForm, 
@@ -617,6 +618,27 @@ def dashboard(request):
             # ============================================================================
             'eventos_proximos': eventos_proximos,
         }
+
+        # Widget de asistencias de hoy desde AWS (solo lectura, no afecta otros módulos)
+        try:
+            from core import aws_service
+            from datetime import date
+            hoy_str = date.today().isoformat()
+            todos_asistencias_hoy = aws_service.obtener_asistencias_proyecto(None)
+            if isinstance(todos_asistencias_hoy, list):
+                asistencias_hoy = [
+                    a for a in todos_asistencias_hoy
+                    if str(a.get('date', a.get('timestamp', ''))[:10]) == hoy_str
+                ]
+            else:
+                asistencias_hoy = []
+            # IDs únicos de trabajadores con algún registro hoy
+            trabajadores_hoy = len({a.get('userId') for a in asistencias_hoy if a.get('userId')})
+            context['asistencias_hoy_count'] = trabajadores_hoy
+            context['geocercas_sin_configurar'] = GeocercaProyecto.objects.filter(activa=True).count() == 0 and Proyecto.objects.filter(activo=True).exists()
+        except Exception:
+            context['asistencias_hoy_count'] = None
+            context['geocercas_sin_configurar'] = False
         
         # Log información del contexto para debugging
         logger.info(f"📊 Contexto dashboard generado con {len(context)} variables para usuario {request.user.username}")
@@ -9242,6 +9264,136 @@ def asistencias_moviles_dashboard(request):
 
 
 @login_required
+def asistencias_moviles_pdf(request):
+    """Genera un PDF del reporte de asistencias de la app móvil."""
+    from core.models import Proyecto
+    from core import aws_service
+    from collections import defaultdict
+    from datetime import datetime
+    from io import BytesIO
+    from reportlab.lib.pagesizes import landscape, A4
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors as rl_colors
+    from reportlab.lib.units import inch
+
+    proyecto_id = request.GET.get('proyecto')
+    fecha_filtro = request.GET.get('fecha', '')
+    proyecto_sel = None
+
+    if proyecto_id:
+        try:
+            proyecto_sel = Proyecto.objects.get(id=proyecto_id, activo=True)
+        except Proyecto.DoesNotExist:
+            pass
+
+    TIPOS_LABEL = {
+        'entry': 'Entrada', 'exit': 'Salida',
+        'lunch_out': 'Sal. Almuerzo', 'lunch_in': 'Ret. Almuerzo',
+    }
+
+    timeline_data = []
+    if proyecto_id:
+        try:
+            registros = aws_service.obtener_asistencias_proyecto(proyecto_id)
+            grupos = defaultdict(lambda: {'nombre': '', 'marcas': {}})
+            for r in registros:
+                ts = r.get('timestamp', 0)
+                dt = datetime.fromtimestamp(ts / 1000)
+                fecha_str = dt.strftime('%Y-%m-%d')
+                if fecha_filtro and fecha_str != fecha_filtro:
+                    continue
+                uid = r.get('userId', '')
+                key = (fecha_str, uid)
+                grupos[key]['nombre'] = r.get('userName') or uid
+                tipo = r.get('type', '')
+                grupos[key]['marcas'][tipo] = dt.strftime('%H:%M')
+
+            for (fecha_str, uid), data in sorted(grupos.items(), reverse=True):
+                marcas = data['marcas']
+                horas_lab = '—'
+                try:
+                    if 'entry' in marcas and 'exit' in marcas:
+                        t_entry = datetime.strptime(f"{fecha_str} {marcas['entry']}", '%Y-%m-%d %H:%M')
+                        t_exit  = datetime.strptime(f"{fecha_str} {marcas['exit']}", '%Y-%m-%d %H:%M')
+                        total_min = (t_exit - t_entry).seconds // 60
+                        if 'lunch_out' in marcas and 'lunch_in' in marcas:
+                            t_lo = datetime.strptime(f"{fecha_str} {marcas['lunch_out']}", '%Y-%m-%d %H:%M')
+                            t_li = datetime.strptime(f"{fecha_str} {marcas['lunch_in']}", '%Y-%m-%d %H:%M')
+                            total_min -= max(0, (t_li - t_lo).seconds // 60)
+                        horas_lab = f"{total_min // 60}h {total_min % 60:02d}m"
+                except Exception:
+                    pass
+
+                timeline_data.append({
+                    'fecha': fecha_str,
+                    'nombre': data['nombre'],
+                    'entrada': marcas.get('entry', '—'),
+                    'sal_almuerzo': marcas.get('lunch_out', '—'),
+                    'ret_almuerzo': marcas.get('lunch_in', '—'),
+                    'salida': marcas.get('exit', '—'),
+                    'horas': horas_lab,
+                })
+        except Exception as e:
+            logger.error(f'Error generando PDF asistencias: {e}')
+
+    # Generar PDF
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(A4),
+                             rightMargin=0.5*inch, leftMargin=0.5*inch,
+                             topMargin=0.5*inch, bottomMargin=0.5*inch)
+    styles = getSampleStyleSheet()
+    story = []
+
+    # Título
+    titulo_style = ParagraphStyle('titulo', parent=styles['Title'], fontSize=16, spaceAfter=6)
+    nombre_proyecto = proyecto_sel.nombre if proyecto_sel else 'Todos los proyectos'
+    fecha_txt = fecha_filtro if fecha_filtro else 'Todas las fechas'
+    story.append(Paragraph(f'Reporte de Asistencias — App Móvil', titulo_style))
+    story.append(Paragraph(f'Proyecto: {nombre_proyecto} | Fecha: {fecha_txt}', styles['Normal']))
+    story.append(Spacer(1, 0.25*inch))
+
+    if not timeline_data:
+        story.append(Paragraph('No hay registros para los filtros seleccionados.', styles['Normal']))
+    else:
+        headers = ['Fecha', 'Trabajador', 'Entrada', 'Sal. Almuerzo', 'Ret. Almuerzo', 'Salida', 'Horas']
+        table_data = [headers]
+        for row in timeline_data:
+            table_data.append([
+                row['fecha'], row['nombre'],
+                row['entrada'], row['sal_almuerzo'],
+                row['ret_almuerzo'], row['salida'],
+                row['horas'],
+            ])
+
+        col_widths = [1.1*inch, 2.5*inch, 1*inch, 1.3*inch, 1.3*inch, 1*inch, 1*inch]
+        t = Table(table_data, colWidths=col_widths, repeatRows=1)
+        t.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), rl_colors.HexColor('#1e3a5f')),
+            ('TEXTCOLOR',  (0, 0), (-1, 0), rl_colors.white),
+            ('FONTNAME',   (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE',   (0, 0), (-1, 0), 9),
+            ('FONTSIZE',   (0, 1), (-1, -1), 8),
+            ('ALIGN',      (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN',     (0, 0), (-1, -1), 'MIDDLE'),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [rl_colors.white, rl_colors.HexColor('#f8fafc')]),
+            ('GRID',       (0, 0), (-1, -1), 0.5, rl_colors.HexColor('#e5e7eb')),
+            ('TOPPADDING',    (0, 0), (-1, -1), 5),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ]))
+        story.append(t)
+
+    doc.build(story)
+    buffer.seek(0)
+
+    fecha_archivo = fecha_filtro.replace('-', '') if fecha_filtro else 'todos'
+    filename = f'asistencias_app_{fecha_archivo}.pdf'
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    return response
+
+
+@login_required
 def geocercas_list(request):
     """Lista todos los proyectos con estado de geocerca."""
     from core.models import Proyecto, GeocercaProyecto
@@ -9313,6 +9465,47 @@ def geocerca_eliminar(request, proyecto_id):
         aws_service.eliminar_geocerca(proyecto_id)
         messages.success(request, f'✅ Geocerca eliminada para "{proyecto.nombre}".')
         logger.info(f'Geocerca eliminada para proyecto {proyecto_id} por {request.user}')
+    return redirect('geocercas_list')
+
+
+@login_required
+def geocerca_resincronizar(request, proyecto_id):
+    """Re-sincroniza la geocerca guardada en Django DB hacia AWS DynamoDB."""
+    from core.models import GeocercaProyecto
+    from core import aws_service
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id, activo=True)
+
+    try:
+        geo = GeocercaProyecto.objects.get(proyecto=proyecto, activa=True)
+    except GeocercaProyecto.DoesNotExist:
+        messages.error(request, f'❌ No hay geocerca guardada localmente para "{proyecto.nombre}".')
+        return redirect('geocercas_list')
+
+    # Re-enviar a AWS según el tipo
+    if geo.tipo == 'circle':
+        c = geo.configuracion
+        result = aws_service.guardar_geocerca_circulo(
+            proyecto_id,
+            float(c.get('lat', 0)),
+            float(c.get('lng', 0)),
+            float(c.get('radiusMeters', 100)),
+        )
+    else:
+        coords = geo.configuracion.get('coordinates', [])
+        result = aws_service.guardar_geocerca_poligono(proyecto_id, coords)
+
+    if result.get('ok'):
+        messages.success(request, f'✅ Geocerca de "{proyecto.nombre}" sincronizada con AWS correctamente.')
+        logger.info(f'Geocerca re-sincronizada proyecto={proyecto_id} usuario={request.user}')
+    else:
+        err = result.get('error', 'Error desconocido')
+        messages.error(request, f'❌ No se pudo sincronizar con AWS: {err}')
+        logger.error(f'Error re-sincronizando geocerca proyecto={proyecto_id}: {err}')
+
     return redirect('geocercas_list')
 
 
@@ -9389,6 +9582,101 @@ def geocerca_proyecto_guardar(request, proyecto_id):
     if redirect_to == 'proyecto_dashboard':
         return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
     return redirect('geocercas_list')
+
+
+@login_required
+def rekognition_trabajadores(request):
+    """Lista trabajadores de todos los proyectos y su estado de registro en AWS Rekognition."""
+    from core import aws_service
+    from core.models import TrabajadorDiario
+
+    # Obtener todos los usuarios registrados en AWS (sin modificar TrabajadorDiario)
+    usuarios_aws = aws_service.obtener_todos_usuarios()
+    nombres_aws = {u.get('name', '').strip().lower(): u for u in usuarios_aws}
+
+    proyectos_activos = Proyecto.objects.filter(activo=True).order_by('nombre')
+    proyecto_filtro_id = request.GET.get('proyecto_id')
+    
+    # Solo leer trabajadores, nunca modificarlos
+    trabajadores_qs = TrabajadorDiario.objects.filter(activo=True).select_related('proyecto').order_by('proyecto__nombre', 'nombre')
+    if proyecto_filtro_id:
+        trabajadores_qs = trabajadores_qs.filter(proyecto_id=proyecto_filtro_id)
+
+    trabajadores_data = []
+    for t in trabajadores_qs:
+        aws_user = nombres_aws.get(t.nombre.strip().lower())
+        trabajadores_data.append({
+            'trabajador': t,
+            'registrado_aws': aws_user is not None,
+            'aws_user': aws_user,
+            'aws_user_id': aws_user.get('userId') if aws_user else None,
+            'foto_url': aws_user.get('photoUrl') if aws_user else None,
+        })
+
+    total_registrados = sum(1 for td in trabajadores_data if td['registrado_aws'])
+    total_pendientes = len(trabajadores_data) - total_registrados
+
+    return render(request, 'core/rekognition/trabajadores.html', {
+        'trabajadores_data': trabajadores_data,
+        'proyectos_activos': proyectos_activos,
+        'proyecto_filtro_id': int(proyecto_filtro_id) if proyecto_filtro_id else None,
+        'total_registrados': total_registrados,
+        'total_pendientes': total_pendientes,
+        'error_aws': len(usuarios_aws) == 0 and TrabajadorDiario.objects.filter(activo=True).exists(),
+    })
+
+
+@login_required
+def rekognition_registrar(request, trabajador_id):
+    """Registra la foto de un trabajador en AWS Rekognition. No modifica el modelo TrabajadorDiario."""
+    from core import aws_service
+    from core.models import TrabajadorDiario
+    import base64
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    trabajador = get_object_or_404(TrabajadorDiario, id=trabajador_id, activo=True)
+
+    foto_data = request.POST.get('foto_base64', '')
+    if not foto_data:
+        return JsonResponse({'ok': False, 'error': 'No se recibió foto.'})
+
+    # Remover prefijo data:image/...;base64, si existe
+    if ',' in foto_data:
+        foto_data = foto_data.split(',', 1)[1]
+
+    result = aws_service.registrar_usuario_rekognition(
+        nombre=trabajador.nombre,
+        project_id=trabajador.proyecto_id,
+        foto_base64=foto_data,
+        email='',
+    )
+
+    if result.get('ok'):
+        data = result.get('data', {})
+        if isinstance(data, dict) and 'data' in data:
+            data = data['data']
+        logger.info(f'Trabajador {trabajador.nombre} registrado en Rekognition. userId={data.get("userId")} por {request.user}')
+        return JsonResponse({'ok': True, 'userId': data.get('userId'), 'nombre': trabajador.nombre})
+    else:
+        err = result.get('error', 'Error desconocido')
+        logger.error(f'Error registrando {trabajador.nombre} en Rekognition: {err}')
+        return JsonResponse({'ok': False, 'error': err})
+
+
+@login_required
+def rekognition_eliminar_usuario(request, user_id):
+    """Elimina un usuario de AWS Rekognition. No modifica TrabajadorDiario."""
+    from core import aws_service
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    result = aws_service.eliminar_usuario_rekognition(user_id)
+    if result.get('ok'):
+        return JsonResponse({'ok': True})
+    return JsonResponse({'ok': False, 'error': result.get('error', 'Error al eliminar')})
 
 
 @csrf_exempt

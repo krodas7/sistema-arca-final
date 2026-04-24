@@ -338,6 +338,17 @@
         </div>
     </div>
 
+    <!-- Alertas App Móvil (solo si hay datos relevantes) -->
+    {% if geocercas_sin_configurar %}
+    <div class="alert alert-warning d-flex align-items-center gap-2 mb-3" style="border-radius:12px;">
+        <i class="fas fa-map-marked-alt fa-lg"></i>
+        <div>
+            <strong>Geocercas sin configurar.</strong> Los trabajadores no podrán registrar asistencia desde la app móvil.
+            <a href="{% url 'geocercas_list' %}" class="alert-link ms-1">Configurar ahora →</a>
+        </div>
+    </div>
+    {% endif %}
+
     <!-- Stats Grid -->
     <div class="stats-grid">
         <div class="stat-card">
@@ -371,6 +382,16 @@
             <div class="stat-value">{{ proyectos_completados }}</div>
             <div class="stat-label">Proyectos Completados</div>
         </div>
+
+        {% if asistencias_hoy_count is not None %}
+        <div class="stat-card" onclick="window.location='{% url 'asistencias_moviles_dashboard' %}'" style="cursor:pointer;">
+            <div class="stat-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+                <i class="fas fa-mobile-alt"></i>
+            </div>
+            <div class="stat-value">{{ asistencias_hoy_count }}</div>
+            <div class="stat-label">Asistencias Hoy (App)</div>
+        </div>
+        {% endif %}
     </div>
 
     <!-- Charts Section -->

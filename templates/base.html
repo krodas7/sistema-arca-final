@@ -117,9 +117,30 @@
                 </li>
 
                 <li class="nav-item">
-                    <a class="nav-link {% if 'asistencia' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'asistencias_dashboard' %}">
+                    <a class="nav-link {% if 'asistencia' in request.resolver_match.url_name and 'moviles' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'asistencias_dashboard' %}">
                         <i class="fas fa-clipboard-check"></i>
                         <span>Asistencias</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if 'geocerca' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'geocercas_list' %}">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Geocercas</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if 'moviles' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'asistencias_moviles_dashboard' %}">
+                        <i class="fas fa-mobile-alt"></i>
+                        <span>App Móvil</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link {% if 'rekognition' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'rekognition_trabajadores' %}">
+                        <i class="fas fa-user-check"></i>
+                        <span>Registro Facial</span>
                     </a>
                 </li>
                 

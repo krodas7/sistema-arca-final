@@ -118,13 +118,20 @@
                         {% else %}—{% endif %}
                     </td>
                     <td class="text-end">
-                        <div class="d-flex gap-2 justify-content-end">
+                        <div class="d-flex gap-2 justify-content-end flex-wrap">
                             <a href="{% url 'geocerca_configurar' item.proyecto.id %}"
                                class="btn btn-sm btn-primary py-1 px-3">
                                 <i class="fas fa-map-marker-alt me-1"></i>
                                 {% if item.tiene_geocerca %}Editar{% else %}Configurar{% endif %}
                             </a>
                             {% if item.tiene_geocerca %}
+                            <form method="post" action="{% url 'geocerca_resincronizar' item.proyecto.id %}">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-info py-1 px-2"
+                                        title="Re-sincronizar con AWS">
+                                    <i class="fas fa-sync-alt"></i>
+                                </button>
+                            </form>
                             <form method="post" action="{% url 'geocerca_eliminar' item.proyecto.id %}"
                                   onsubmit="return confirm('¿Eliminar la geocerca de {{ item.proyecto.nombre }}?')">
                                 {% csrf_token %}

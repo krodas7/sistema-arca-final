@@ -294,7 +294,14 @@ urlpatterns = [
     path('api/aws/webhook/registro-usuario/', views.aws_webhook_registro_usuario, name='aws_webhook_registro_usuario'),
 
     # ==================== MÓDULO GEOCERCAS ====================
+    path('asistencias/moviles/pdf/', views.asistencias_moviles_pdf, name='asistencias_moviles_pdf'),
     path('geocercas/', views.geocercas_list, name='geocercas_list'),
     path('geocercas/<int:proyecto_id>/configurar/', views.geocerca_configurar, name='geocerca_configurar'),
     path('geocercas/<int:proyecto_id>/eliminar/', views.geocerca_eliminar, name='geocerca_eliminar'),
+    path('geocercas/<int:proyecto_id>/resincronizar/', views.geocerca_resincronizar, name='geocerca_resincronizar'),
+
+    # Rekognition - Registro de trabajadores en AWS (solo lectura de TrabajadorDiario)
+    path('rekognition/trabajadores/', views.rekognition_trabajadores, name='rekognition_trabajadores'),
+    path('rekognition/trabajadores/<int:trabajador_id>/registrar/', views.rekognition_registrar, name='rekognition_registrar'),
+    path('rekognition/usuarios/<str:user_id>/eliminar/', views.rekognition_eliminar_usuario, name='rekognition_eliminar_usuario'),
 ]
