@@ -1751,6 +1751,62 @@ class PlanillaTrabajadoresDiarios(models.Model):
         return total_bruto - self.total_anticipos
 
 
+# ===== GEOCERCAS (App Móvil) =====
+
+class GeocercaProyecto(models.Model):
+    """Almacena la geocerca configurada para un proyecto (espejo de AWS DynamoDB)."""
+    TIPO_CHOICES = [
+        ('circle', 'Círculo'),
+        ('polygon', 'Polígono'),
+    ]
+
+    proyecto = models.OneToOneField(
+        'Proyecto', on_delete=models.CASCADE,
+        related_name='geocerca', verbose_name='Proyecto'
+    )
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, verbose_name='Tipo')
+    # Para círculo: {'lat': float, 'lng': float, 'radiusMeters': float}
+    # Para polígono: {'coordinates': [[lat, lng], ...]}
+    configuracion = models.JSONField(verbose_name='Configuración')
+    activa = models.BooleanField(default=True, verbose_name='Activa')
+    actualizado_por = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True,
+        verbose_name='Actualizado por'
+    )
+    actualizado_en = models.DateTimeField(auto_now=True, verbose_name='Última actualización')
+    creado_en = models.DateTimeField(auto_now_add=True, verbose_name='Creado en')
+
+    class Meta:
+        verbose_name = 'Geocerca'
+        verbose_name_plural = 'Geocercas'
+
+    def __str__(self):
+        return f"Geocerca {self.get_tipo_display()} — {self.proyecto.nombre}"
+
+    @property
+    def resumen(self):
+        """Texto corto descriptivo de la geocerca."""
+        if self.tipo == 'circle':
+            c = self.configuracion
+            r = c.get('radiusMeters', 0)
+            return f"Círculo · radio {r:.0f} m"
+        coords = self.configuracion.get('coordinates', [])
+        return f"Polígono · {len(coords)} puntos"
+
+    @property
+    def centro(self):
+        """Retorna (lat, lng) del centro para visualizar en mapa."""
+        if self.tipo == 'circle':
+            c = self.configuracion
+            return float(c.get('lat', 0)), float(c.get('lng', 0))
+        coords = self.configuracion.get('coordinates', [])
+        if coords:
+            lats = [float(p[0]) for p in coords]
+            lngs = [float(p[1]) for p in coords]
+            return sum(lats) / len(lats), sum(lngs) / len(lngs)
+        return 15.6356, -90.5069  # Guatemala por defecto
+
+
 # ===== MÓDULO DE ASISTENCIAS =====
 
 class Asistencia(models.Model):
