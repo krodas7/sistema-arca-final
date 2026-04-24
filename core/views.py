@@ -8907,42 +8907,149 @@ def trabajador_diario_remove_from_planilla(request, proyecto_id, planilla_id, tr
 
 @login_required
 def asistencias_dashboard(request):
-    """Dashboard principal del módulo de asistencias"""
-    from core.models import Asistencia, Colaborador, TrabajadorDiario, Proyecto
-    
+    """Dashboard principal del módulo de asistencias — fuente unificada Django + AWS App Móvil."""
+    from core.models import Asistencia, Proyecto
+    from core import aws_service
+    from collections import defaultdict
+    from datetime import datetime as dt
+
     hoy = timezone.now().date()
     inicio_mes = hoy.replace(day=1)
-    
-    # Estadísticas del mes
+    hoy_str = hoy.isoformat()
+
+    # ── 1. Datos de Django (registros manuales) ────────────────────────────
     asistencias_mes = Asistencia.objects.filter(fecha__gte=inicio_mes)
-    total_presentes = asistencias_mes.filter(estado='presente').count()
+    total_presentes_django = asistencias_mes.filter(estado='presente').count()
     total_ausentes = asistencias_mes.filter(estado='ausente').count()
     total_tardanzas = asistencias_mes.filter(estado='tardanza').count()
     total_permisos = asistencias_mes.filter(estado='permiso').count()
-    
-    # Asistencias de hoy
-    asistencias_hoy = Asistencia.objects.filter(fecha=hoy).select_related(
+
+    asistencias_hoy_django = Asistencia.objects.filter(fecha=hoy).select_related(
         'colaborador', 'trabajador_diario', 'proyecto'
     ).order_by('-fecha_registro')
-    
-    # Últimas asistencias registradas
-    ultimas_asistencias = Asistencia.objects.select_related(
+
+    ultimas_django = Asistencia.objects.select_related(
         'colaborador', 'trabajador_diario', 'proyecto', 'registrado_por'
-    ).order_by('-fecha', '-fecha_registro')[:10]
-    
-    # Proyectos para filtros
+    ).order_by('-fecha', '-fecha_registro')[:15]
+
+    # Normalizar registros Django a formato unificado
+    def _django_to_unified(a):
+        return {
+            'fuente': 'manual',
+            'fuente_label': 'Manual',
+            'id': a.id,
+            'nombre': a.nombre_personal,
+            'tipo_label': a.get_tipo_personal_display(),
+            'fecha': a.fecha,
+            'estado': a.estado,
+            'estado_display': a.get_estado_display(),
+            'estado_class': a.get_estado_badge_class(),
+            'hora_entrada': a.hora_entrada.strftime('%H:%M') if a.hora_entrada else '—',
+            'hora_salida': a.hora_salida.strftime('%H:%M') if a.hora_salida else '—',
+            'horas_laboradas': str(a.horas_laboradas) if a.horas_laboradas else '—',
+            'proyecto_nombre': a.proyecto.nombre if a.proyecto else '—',
+            'proyecto_id': a.proyecto_id,
+        }
+
+    # ── 2. Datos de AWS App Móvil ──────────────────────────────────────────
+    aws_hoy_unificados = []
+    aws_ultimos_unificados = []
+    total_presentes_aws = 0
+
+    try:
+        registros_aws = aws_service.obtener_asistencias_proyecto(None) or []
+        # Agrupar por (userId, fecha)
+        grupos = defaultdict(lambda: {'nombre': '', 'proyecto_id': '', 'marcas': {}})
+        for r in registros_aws:
+            ts = r.get('timestamp', 0)
+            try:
+                fecha_dt = dt.fromtimestamp(ts / 1000)
+                fecha_str = fecha_dt.strftime('%Y-%m-%d')
+            except Exception:
+                continue
+            uid = r.get('userId', '')
+            key = (fecha_str, uid)
+            grupos[key]['nombre'] = r.get('userName') or uid
+            grupos[key]['proyecto_id'] = r.get('projectId', '')
+            tipo = r.get('type', '')
+            grupos[key]['marcas'][tipo] = fecha_dt.strftime('%H:%M')
+
+        # Construir proyectos dict para nombres
+        proyectos_map = {str(p.id): p.nombre for p in Proyecto.objects.filter(activo=True)}
+
+        def _aws_to_unified(fecha_str, uid, data):
+            marcas = data['marcas']
+            pid = str(data.get('proyecto_id', ''))
+            # Calcular horas laboradas
+            horas_lab = '—'
+            try:
+                if 'entry' in marcas and 'exit' in marcas:
+                    t_e = dt.strptime(f"{fecha_str} {marcas['entry']}", '%Y-%m-%d %H:%M')
+                    t_s = dt.strptime(f"{fecha_str} {marcas['exit']}", '%Y-%m-%d %H:%M')
+                    total_min = int((t_s - t_e).total_seconds() // 60)
+                    if 'lunch_out' in marcas and 'lunch_in' in marcas:
+                        t_lo = dt.strptime(f"{fecha_str} {marcas['lunch_out']}", '%Y-%m-%d %H:%M')
+                        t_li = dt.strptime(f"{fecha_str} {marcas['lunch_in']}", '%Y-%m-%d %H:%M')
+                        total_min -= max(0, int((t_li - t_lo).total_seconds() // 60))
+                    horas_lab = f"{total_min // 60}h {total_min % 60:02d}m"
+            except Exception:
+                pass
+            estado = 'presente' if 'entry' in marcas else 'pendiente'
+            return {
+                'fuente': 'app',
+                'fuente_label': 'App Móvil',
+                'id': None,
+                'nombre': data['nombre'],
+                'tipo_label': 'App Móvil',
+                'fecha': fecha_str,
+                'estado': estado,
+                'estado_display': 'Presente' if estado == 'presente' else 'Sin entrada',
+                'estado_class': 'bg-success' if estado == 'presente' else 'bg-secondary',
+                'hora_entrada': marcas.get('entry', '—'),
+                'hora_salida': marcas.get('exit', '—'),
+                'horas_laboradas': horas_lab,
+                'proyecto_nombre': proyectos_map.get(pid, pid) if pid else '—',
+                'proyecto_id': pid,
+            }
+
+        # Separar hoy vs histórico
+        for (fecha_str, uid), data in sorted(grupos.items(), reverse=True):
+            unified = _aws_to_unified(fecha_str, uid, data)
+            if fecha_str == hoy_str:
+                aws_hoy_unificados.append(unified)
+                if unified['estado'] == 'presente':
+                    total_presentes_aws += 1
+            aws_ultimos_unificados.append(unified)
+
+    except Exception as e:
+        logger.warning(f'asistencias_dashboard: no se pudo conectar a AWS: {e}')
+
+    # ── 3. Combinar ────────────────────────────────────────────────────────
+    asistencias_hoy_unificadas = (
+        [_django_to_unified(a) for a in asistencias_hoy_django] + aws_hoy_unificados
+    )
+    ultimas_unificadas = (
+        [_django_to_unified(a) for a in ultimas_django] + aws_ultimos_unificados[:15]
+    )
+    # Ordenar recientes primero (fecha desc)
+    ultimas_unificadas.sort(key=lambda x: str(x.get('fecha', '')), reverse=True)
+    ultimas_unificadas = ultimas_unificadas[:15]
+
     proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
-    
+
     context = {
         'hoy': hoy,
-        'total_presentes': total_presentes,
+        'total_presentes': total_presentes_django + total_presentes_aws,
+        'total_presentes_manual': total_presentes_django,
+        'total_presentes_app': total_presentes_aws,
         'total_ausentes': total_ausentes,
         'total_tardanzas': total_tardanzas,
         'total_permisos': total_permisos,
-        'total_mes': asistencias_mes.count(),
-        'asistencias_hoy': asistencias_hoy,
-        'ultimas_asistencias': ultimas_asistencias,
+        'total_mes': asistencias_mes.count() + len(aws_ultimos_unificados),
+        'asistencias_hoy': asistencias_hoy_unificadas,
+        'ultimas_asistencias': ultimas_unificadas,
         'proyectos': proyectos,
+        'tiene_aws': bool(aws_hoy_unificados or aws_ultimos_unificados),
     }
     return render(request, 'core/asistencias/dashboard.html', context)
 

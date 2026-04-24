@@ -24,17 +24,15 @@
         border-radius: 16px;
         margin-bottom: 2rem;
     }
-
     .page-header h1 { font-size: 1.875rem; font-weight: 700; margin: 0 0 0.5rem 0; }
-    .page-header p { margin: 0; opacity: 0.85; font-size: 1rem; }
+    .page-header p  { margin: 0; opacity: 0.85; font-size: 1rem; }
 
     .stats-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(175px, 1fr));
         gap: 1.25rem;
         margin-bottom: 2rem;
     }
-
     .stat-card {
         background: white;
         border-radius: 12px;
@@ -45,20 +43,15 @@
         flex-direction: column;
         gap: 0.5rem;
     }
-
     .stat-card .icon {
-        width: 48px;
-        height: 48px;
+        width: 48px; height: 48px;
         border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-        margin-bottom: 0.5rem;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem; margin-bottom: 0.5rem;
     }
-
     .stat-card .value { font-size: 2rem; font-weight: 700; color: var(--text-primary); line-height: 1; }
     .stat-card .label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+    .stat-card .sublabel { font-size: 0.75rem; color: var(--text-secondary); opacity: 0.7; margin-top: 0.15rem; }
 
     .icon-presentes  { background: #dcfce7; color: #16a34a; }
     .icon-ausentes   { background: #fee2e2; color: #dc2626; }
@@ -74,48 +67,42 @@
         overflow: hidden;
         margin-bottom: 1.5rem;
     }
-
     .section-header {
         padding: 1.25rem 1.5rem;
         border-bottom: 1px solid var(--border);
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 1rem;
+        display: flex; align-items: center; justify-content: space-between; gap: 1rem;
     }
-
     .section-header h5 { margin: 0; font-size: 1rem; font-weight: 600; color: var(--text-primary); }
 
     .data-table { width: 100%; border-collapse: collapse; }
-    .data-table th { background: var(--bg-light); padding: 0.75rem 1rem; font-size: 0.8125rem; font-weight: 600; text-align: left; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--border); }
-    .data-table td { padding: 0.875rem 1rem; font-size: 0.9375rem; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+    .data-table th {
+        background: var(--bg-light); padding: 0.75rem 1rem;
+        font-size: 0.8125rem; font-weight: 600; text-align: left;
+        color: var(--text-secondary); text-transform: uppercase;
+        letter-spacing: 0.05em; border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+        padding: 0.875rem 1rem; font-size: 0.9375rem;
+        color: var(--text-primary); border-bottom: 1px solid var(--border);
+        vertical-align: middle;
+    }
     .data-table tr:last-child td { border-bottom: none; }
     .data-table tr:hover td { background: var(--bg-light); }
 
+    /* Indicadores de fuente */
+    .badge-fuente-app    { background: #1e3a5f; color: white; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 20px; font-weight: 600; }
+    .badge-fuente-manual { background: #6b7280; color: white; font-size: 0.7rem; padding: 0.2rem 0.55rem; border-radius: 20px; font-weight: 600; }
+
     .badge { padding: 0.3rem 0.75rem; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
 
-    .quick-actions {
-        display: flex;
-        gap: 1rem;
-        flex-wrap: wrap;
-        margin-bottom: 2rem;
-    }
-
     .btn-action {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+        display: inline-flex; align-items: center; gap: 0.5rem;
         padding: 0.75rem 1.5rem;
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 0.9375rem;
-        text-decoration: none;
-        transition: all 0.2s;
-        border: none;
-        cursor: pointer;
+        border-radius: 8px; font-weight: 600; font-size: 0.9375rem;
+        text-decoration: none; transition: all 0.2s;
+        border: none; cursor: pointer;
     }
-
-    .btn-primary-action { background: var(--primary); color: white; }
+    .btn-primary-action  { background: var(--primary); color: white; }
     .btn-primary-action:hover { background: var(--primary-light); color: white; }
     .btn-secondary-action { background: var(--bg-light); color: var(--text-primary); border: 1px solid var(--border); }
     .btn-secondary-action:hover { background: #f3f4f6; color: var(--text-primary); }
@@ -123,6 +110,15 @@
     .empty-state { text-align: center; padding: 3rem 2rem; color: var(--text-secondary); }
     .empty-state i { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
     .empty-state p { margin: 0; font-size: 0.95rem; }
+
+    /* Leyenda de fuentes */
+    .fuente-legend {
+        display: flex; gap: 1rem; align-items: center;
+        font-size: 0.8rem; color: var(--text-secondary);
+        padding: 0.5rem 1.5rem; border-bottom: 1px solid var(--border);
+        background: var(--bg-light);
+    }
+    .fuente-legend span { display: flex; align-items: center; gap: 0.35rem; }
 </style>
 {% endblock %}
 
@@ -131,20 +127,25 @@
 
     <!-- Header -->
     <div class="page-header">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
             <div>
                 <h1><i class="fas fa-clipboard-check me-2"></i>Módulo de Asistencias</h1>
-                <p>Resumen de hoy: {{ hoy|date:"l, d \d\e F \d\e Y" }}</p>
+                <p>
+                    Resumen de hoy: {{ hoy|date:"l, d \d\e F \d\e Y" }}
+                    {% if tiene_aws %}
+                    &nbsp;·&nbsp;<i class="fas fa-satellite-dish"></i> Vista unificada: manual + app móvil
+                    {% endif %}
+                </p>
             </div>
-            <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+            <div style="display:flex; gap:0.75rem; flex-wrap:wrap;">
                 <a href="{% url 'asistencia_create' %}" class="btn-action btn-primary-action">
-                    <i class="fas fa-plus"></i> Registrar Asistencia
+                    <i class="fas fa-plus"></i> Registrar
                 </a>
                 <a href="{% url 'asistencias_list' %}" class="btn-action btn-secondary-action">
                     <i class="fas fa-list"></i> Ver Todo
                 </a>
-                <a href="{% url 'asistencias_moviles_dashboard' %}" class="btn-action btn-secondary-action"
-                   style="background: #1e3a5f; color:white; border:none;">
+                <a href="{% url 'asistencias_moviles_dashboard' %}" class="btn-action"
+                   style="background:#1e3a5f; color:white; padding:0.75rem 1.5rem; border-radius:8px; font-weight:600; text-decoration:none; display:inline-flex; align-items:center; gap:0.5rem;">
                     <i class="fas fa-mobile-alt"></i> App Móvil
                 </a>
             </div>
@@ -156,7 +157,10 @@
         <div class="stat-card">
             <div class="icon icon-presentes"><i class="fas fa-check-circle"></i></div>
             <div class="value">{{ total_presentes }}</div>
-            <div class="label">Presentes (mes)</div>
+            <div class="label">Presentes</div>
+            {% if total_presentes_app %}
+            <div class="sublabel">{{ total_presentes_manual }} manual · {{ total_presentes_app }} app hoy</div>
+            {% endif %}
         </div>
         <div class="stat-card">
             <div class="icon icon-ausentes"><i class="fas fa-times-circle"></i></div>
@@ -176,50 +180,68 @@
         <div class="stat-card">
             <div class="icon icon-total"><i class="fas fa-calendar-alt"></i></div>
             <div class="value">{{ total_mes }}</div>
-            <div class="label">Total registros (mes)</div>
+            <div class="label">Total registros</div>
         </div>
     </div>
 
     <div class="row g-4">
-        <!-- Asistencias de hoy -->
+        <!-- Asistencias de hoy unificadas -->
         <div class="col-lg-7">
             <div class="section-card">
                 <div class="section-header">
                     <h5><i class="fas fa-calendar-day me-2 text-primary"></i>Asistencias de Hoy</h5>
-                    <a href="{% url 'asistencia_create' %}" class="btn-action btn-primary-action" style="padding: 0.5rem 1rem; font-size: 0.875rem;">
+                    <a href="{% url 'asistencia_create' %}" class="btn-action btn-primary-action"
+                       style="padding:0.5rem 1rem; font-size:0.875rem;">
                         <i class="fas fa-plus"></i> Registrar
                     </a>
                 </div>
+                {% if tiene_aws %}
+                <div class="fuente-legend">
+                    <span><span class="badge-fuente-manual">Manual</span> Registro administrativo</span>
+                    <span><span class="badge-fuente-app">App Móvil</span> Reconocimiento facial</span>
+                </div>
+                {% endif %}
                 {% if asistencias_hoy %}
                 <table class="data-table">
                     <thead>
                         <tr>
                             <th>Personal</th>
-                            <th>Tipo</th>
+                            <th>Fuente</th>
                             <th>Estado</th>
                             <th>Entrada</th>
                             <th>Salida</th>
+                            <th>Horas</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for a in asistencias_hoy %}
                         <tr>
                             <td>
-                                <a href="{% url 'asistencia_detail' a.id %}" style="color: var(--primary); text-decoration: none; font-weight: 600;">
-                                    {{ a.nombre_personal }}
+                                {% if a.id %}
+                                <a href="{% url 'asistencia_detail' a.id %}"
+                                   style="color:var(--primary); text-decoration:none; font-weight:600;">
+                                    {{ a.nombre }}
                                 </a>
-                                {% if a.proyecto %}
-                                    <br><small style="color: var(--text-secondary);">{{ a.proyecto.nombre }}</small>
+                                {% else %}
+                                <span style="font-weight:600;">{{ a.nombre }}</span>
+                                {% endif %}
+                                {% if a.proyecto_nombre and a.proyecto_nombre != '—' %}
+                                <br><small style="color:var(--text-secondary);">{{ a.proyecto_nombre }}</small>
                                 {% endif %}
                             </td>
-                            <td><small class="badge bg-secondary">{{ a.get_tipo_personal_display }}</small></td>
                             <td>
-                                <span class="badge {{ a.get_estado_badge_class }}">
-                                    {{ a.get_estado_display }}
-                                </span>
+                                {% if a.fuente == 'app' %}
+                                <span class="badge-fuente-app"><i class="fas fa-mobile-alt me-1"></i>App</span>
+                                {% else %}
+                                <span class="badge-fuente-manual"><i class="fas fa-edit me-1"></i>Manual</span>
+                                {% endif %}
                             </td>
-                            <td>{{ a.hora_entrada|time:"H:i"|default:"--" }}</td>
-                            <td>{{ a.hora_salida|time:"H:i"|default:"--" }}</td>
+                            <td>
+                                <span class="badge {{ a.estado_class }}">{{ a.estado_display }}</span>
+                            </td>
+                            <td>{{ a.hora_entrada }}</td>
+                            <td>{{ a.hora_salida }}</td>
+                            <td style="font-size:0.85rem; color:var(--text-secondary);">{{ a.horas_laboradas }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -233,25 +255,40 @@
             </div>
         </div>
 
-        <!-- Últimos registros -->
+        <!-- Últimos registros unificados -->
         <div class="col-lg-5">
             <div class="section-card">
                 <div class="section-header">
                     <h5><i class="fas fa-history me-2 text-secondary"></i>Últimos Registros</h5>
-                    <a href="{% url 'asistencias_list' %}" style="font-size: 0.875rem; color: var(--primary); text-decoration: none;">Ver todos →</a>
+                    <a href="{% url 'asistencias_list' %}"
+                       style="font-size:0.875rem; color:var(--primary); text-decoration:none;">Ver todos →</a>
                 </div>
                 {% if ultimas_asistencias %}
-                <div style="padding: 0.5rem 0;">
+                <div style="padding:0.5rem 0;">
                     {% for a in ultimas_asistencias %}
-                    <div style="display: flex; align-items: center; gap: 1rem; padding: 0.875rem 1.5rem; border-bottom: 1px solid var(--border);">
-                        <div style="width: 38px; height: 38px; background: linear-gradient(135deg, #3b82f6, #1d4ed8); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">
-                            {{ a.nombre_personal|first|upper }}
+                    <div style="display:flex; align-items:center; gap:1rem; padding:0.875rem 1.5rem; border-bottom:1px solid var(--border);">
+                        <!-- Avatar con color según fuente -->
+                        <div style="width:38px; height:38px;
+                            background: {% if a.fuente == 'app' %}linear-gradient(135deg,#1e3a5f,#2563eb){% else %}linear-gradient(135deg,#3b82f6,#1d4ed8){% endif %};
+                            border-radius:50%; display:flex; align-items:center; justify-content:center;
+                            color:white; font-weight:700; font-size:0.9rem; flex-shrink:0;">
+                            {{ a.nombre|first|upper }}
                         </div>
-                        <div style="flex: 1; min-width: 0;">
-                            <div style="font-weight: 600; font-size: 0.9375rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ a.nombre_personal }}</div>
-                            <div style="font-size: 0.8rem; color: var(--text-secondary);">{{ a.fecha|date:"d/m/Y" }}</div>
+                        <div style="flex:1; min-width:0;">
+                            <div style="font-weight:600; font-size:0.9375rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                {{ a.nombre }}
+                            </div>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">
+                                {{ a.fecha }}
+                                &nbsp;·&nbsp;
+                                {% if a.fuente == 'app' %}
+                                <span class="badge-fuente-app">App</span>
+                                {% else %}
+                                <span class="badge-fuente-manual">Manual</span>
+                                {% endif %}
+                            </div>
                         </div>
-                        <span class="badge {{ a.get_estado_badge_class }}">{{ a.get_estado_display }}</span>
+                        <span class="badge {{ a.estado_class }}">{{ a.estado_display }}</span>
                     </div>
                     {% endfor %}
                 </div>
