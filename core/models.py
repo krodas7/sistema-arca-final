@@ -1923,7 +1923,7 @@ class Asistencia(models.Model):
         return clases.get(self.estado, 'bg-secondary')
 
 
-class Permiso(models.Model):
+class PermisoAusencia(models.Model):
     """Permiso o ausencia justificada del personal."""
 
     TIPO_CHOICES = [
@@ -1949,15 +1949,15 @@ class Permiso(models.Model):
                                      verbose_name="Tipo de Personal")
     colaborador = models.ForeignKey(
         'Colaborador', on_delete=models.CASCADE, null=True, blank=True,
-        related_name='permisos', verbose_name="Colaborador"
+        related_name='permisos_ausencia', verbose_name="Colaborador"
     )
     trabajador_diario = models.ForeignKey(
         'TrabajadorDiario', on_delete=models.CASCADE, null=True, blank=True,
-        related_name='permisos', verbose_name="Trabajador Diario"
+        related_name='permisos_ausencia', verbose_name="Trabajador Diario"
     )
     proyecto = models.ForeignKey(
         'Proyecto', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='permisos', verbose_name="Proyecto"
+        related_name='permisos_ausencia', verbose_name="Proyecto"
     )
 
     tipo         = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name="Tipo de Permiso")
@@ -1987,8 +1987,8 @@ class Permiso(models.Model):
     fecha_actualizacion = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Permiso'
-        verbose_name_plural = 'Permisos'
+        verbose_name = 'Permiso / Ausencia'
+        verbose_name_plural = 'Permisos y Ausencias'
         ordering = ['-fecha_registro']
 
     def __str__(self):
