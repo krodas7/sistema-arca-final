@@ -116,33 +116,48 @@
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a class="nav-link {% if 'asistencia' in request.resolver_match.url_name and 'moviles' not in request.resolver_match.url_name %}active{% endif %}" href="{% url 'asistencias_dashboard' %}">
-                        <i class="fas fa-clipboard-check"></i>
-                        <span>Asistencias</span>
+                {% with is_app_section='asistencia' in request.resolver_match.url_name or 'moviles' in request.resolver_match.url_name or 'geocerca' in request.resolver_match.url_name or 'rekognition' in request.resolver_match.url_name or 'app_movil' in request.resolver_match.url_name %}
+                <li class="nav-item has-submenu" id="navGroupApp">
+                    <a class="nav-link nav-group-toggle {% if is_app_section %}active{% endif %}"
+                       href="#"
+                       onclick="toggleNavGroup(event, 'submenuApp')"
+                       aria-expanded="{% if is_app_section %}true{% else %}false{% endif %}">
+                        <i class="fas fa-satellite-dish"></i>
+                        <span>App & Asistencias</span>
+                        <i class="fas fa-chevron-down nav-chevron ms-auto {% if is_app_section %}rotated{% endif %}"></i>
                     </a>
+                    <ul class="submenu nav flex-column {% if is_app_section %}active{% endif %}" id="submenuApp">
+                        <li class="nav-item">
+                            <a class="nav-link nav-sublink {% if 'asistencia' in request.resolver_match.url_name and 'moviles' not in request.resolver_match.url_name %}active{% endif %}"
+                               href="{% url 'asistencias_dashboard' %}">
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>Asistencias</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-sublink {% if 'geocerca' in request.resolver_match.url_name %}active{% endif %}"
+                               href="{% url 'geocercas_list' %}">
+                                <i class="fas fa-map-marked-alt"></i>
+                                <span>Geocercas</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-sublink {% if 'moviles' in request.resolver_match.url_name %}active{% endif %}"
+                               href="{% url 'asistencias_moviles_dashboard' %}">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span>App Móvil</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link nav-sublink {% if 'rekognition' in request.resolver_match.url_name %}active{% endif %}"
+                               href="{% url 'rekognition_trabajadores' %}">
+                                <i class="fas fa-user-check"></i>
+                                <span>Registro Facial</span>
+                            </a>
+                        </li>
+                    </ul>
                 </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if 'geocerca' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'geocercas_list' %}">
-                        <i class="fas fa-map-marked-alt"></i>
-                        <span>Geocercas</span>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if 'moviles' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'asistencias_moviles_dashboard' %}">
-                        <i class="fas fa-mobile-alt"></i>
-                        <span>App Móvil</span>
-                    </a>
-                </li>
-
-                <li class="nav-item">
-                    <a class="nav-link {% if 'rekognition' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'rekognition_trabajadores' %}">
-                        <i class="fas fa-user-check"></i>
-                        <span>Registro Facial</span>
-                    </a>
-                </li>
+                {% endwith %}
                 
                 <li class="nav-item">
                     <a class="nav-link {% if 'gastos' in request.resolver_match.url_name %}active{% endif %}" href="{% url 'gastos_dashboard' %}">
@@ -429,6 +444,19 @@
             }
         });
         
+        // Toggle de grupos de navegación colapsables
+        function toggleNavGroup(e, submenuId) {
+            e.preventDefault();
+            e.stopPropagation();
+            const submenu = document.getElementById(submenuId);
+            const toggle = e.currentTarget;
+            const chevron = toggle.querySelector('.nav-chevron');
+            const isOpen = submenu.classList.contains('active');
+            submenu.classList.toggle('active', !isOpen);
+            if (chevron) chevron.classList.toggle('rotated', !isOpen);
+            toggle.setAttribute('aria-expanded', String(!isOpen));
+        }
+
         // Indicador de conexión
         function updateConnectionStatus() {
             const statusElement = document.getElementById('connectionStatus');
