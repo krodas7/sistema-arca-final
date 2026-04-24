@@ -285,6 +285,12 @@ urlpatterns = [
     path('asistencias/lista/', views.asistencias_list, name='asistencias_list'),
     path('asistencias/registrar/', views.asistencia_create, name='asistencia_create'),
     path('asistencias/<int:asistencia_id>/', views.asistencia_detail, name='asistencia_detail'),
+    # Permisos y Ausencias
+    path('permisos/', views.permisos_ausencia_list, name='permisos_ausencia_list'),
+    path('permisos/nuevo/', views.permiso_ausencia_create, name='permiso_ausencia_create'),
+    path('permisos/<int:pk>/', views.permiso_ausencia_detail, name='permiso_ausencia_detail'),
+    path('permisos/<int:pk>/resolver/', views.permiso_ausencia_resolver, name='permiso_ausencia_resolver'),
+    path('permisos/<int:pk>/pdf/', views.permiso_ausencia_pdf, name='permiso_ausencia_pdf'),
     path('asistencias/<int:asistencia_id>/editar/', views.asistencia_edit, name='asistencia_edit'),
     path('asistencias/<int:asistencia_id>/eliminar/', views.asistencia_delete, name='asistencia_delete'),
 

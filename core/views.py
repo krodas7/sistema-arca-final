@@ -8903,6 +8903,365 @@ def trabajador_diario_remove_from_planilla(request, proyecto_id, planilla_id, tr
     return render(request, 'core/planillas_trabajadores_diarios/remove_trabajador.html', context)
 
 
+# ==================== MÓDULO DE PERMISOS Y AUSENCIAS ====================
+
+@login_required
+def permisos_ausencia_list(request):
+    """Lista de permisos y ausencias con filtros."""
+    from core.models import PermisoAusencia, Proyecto, Colaborador, TrabajadorDiario
+
+    permisos = PermisoAusencia.objects.select_related(
+        'colaborador', 'trabajador_diario', 'proyecto', 'aprobado_por', 'registrado_por'
+    )
+
+    # Filtros
+    estado      = request.GET.get('estado', '')
+    tipo        = request.GET.get('tipo', '')
+    proyecto_id = request.GET.get('proyecto', '')
+    busqueda    = request.GET.get('busqueda', '').strip()
+    mes         = request.GET.get('mes', '')
+
+    if estado:
+        permisos = permisos.filter(estado=estado)
+    if tipo:
+        permisos = permisos.filter(tipo=tipo)
+    if proyecto_id:
+        permisos = permisos.filter(proyecto_id=proyecto_id)
+    if mes:
+        try:
+            year, month = mes.split('-')
+            permisos = permisos.filter(fecha_inicio__year=year, fecha_inicio__month=month)
+        except Exception:
+            pass
+    if busqueda:
+        from django.db.models import Q
+        permisos = permisos.filter(
+            Q(colaborador__nombre__icontains=busqueda) |
+            Q(trabajador_diario__nombre__icontains=busqueda) |
+            Q(motivo__icontains=busqueda)
+        )
+
+    # Stats rápidos
+    total_pendientes = PermisoAusencia.objects.filter(estado='pendiente').count()
+    total_aprobados  = PermisoAusencia.objects.filter(estado='aprobado').count()
+    total_rechazados = PermisoAusencia.objects.filter(estado='rechazado').count()
+
+    context = {
+        'permisos': permisos,
+        'proyectos': Proyecto.objects.filter(activo=True).order_by('nombre'),
+        'tipo_choices': PermisoAusencia.TIPO_CHOICES,
+        'total_pendientes': total_pendientes,
+        'total_aprobados': total_aprobados,
+        'total_rechazados': total_rechazados,
+        'filtros': {
+            'estado': estado, 'tipo': tipo,
+            'proyecto': proyecto_id, 'busqueda': busqueda, 'mes': mes,
+        },
+    }
+    return render(request, 'core/permisos/list.html', context)
+
+
+@login_required
+def permiso_ausencia_create(request):
+    """Crear nuevo permiso / ausencia."""
+    from core.models import PermisoAusencia, Colaborador, TrabajadorDiario, Proyecto
+
+    colaboradores      = Colaborador.objects.filter(activo=True).order_by('nombre')
+    trabajadores       = TrabajadorDiario.objects.order_by('nombre')
+    proyectos          = Proyecto.objects.filter(activo=True).order_by('nombre')
+
+    if request.method == 'POST':
+        tipo_personal    = request.POST.get('tipo_personal')
+        colaborador_id   = request.POST.get('colaborador_id')
+        trabajador_id    = request.POST.get('trabajador_id')
+        proyecto_id      = request.POST.get('proyecto_id') or None
+        tipo             = request.POST.get('tipo')
+        fecha_inicio     = request.POST.get('fecha_inicio')
+        fecha_fin        = request.POST.get('fecha_fin')
+        motivo           = request.POST.get('motivo', '').strip()
+        doc_ref          = request.POST.get('documento_adjunto', '').strip()
+
+        errors = []
+        if not tipo_personal:
+            errors.append('Selecciona el tipo de personal.')
+        if tipo_personal == 'colaborador' and not colaborador_id:
+            errors.append('Selecciona un colaborador.')
+        if tipo_personal == 'trabajador_diario' and not trabajador_id:
+            errors.append('Selecciona un trabajador diario.')
+        if not tipo:
+            errors.append('Selecciona el tipo de permiso.')
+        if not fecha_inicio or not fecha_fin:
+            errors.append('Las fechas son obligatorias.')
+        if not motivo:
+            errors.append('El motivo es obligatorio.')
+
+        if not errors:
+            from datetime import date
+            try:
+                fi = date.fromisoformat(fecha_inicio)
+                ff = date.fromisoformat(fecha_fin)
+                if ff < fi:
+                    errors.append('La fecha de fin no puede ser anterior a la de inicio.')
+            except ValueError:
+                errors.append('Formato de fecha inválido.')
+
+        if not errors:
+            p = PermisoAusencia(
+                tipo_personal=tipo_personal,
+                tipo=tipo,
+                fecha_inicio=fecha_inicio,
+                fecha_fin=fecha_fin,
+                motivo=motivo,
+                documento_adjunto=doc_ref,
+                registrado_por=request.user,
+            )
+            if tipo_personal == 'colaborador':
+                p.colaborador_id = colaborador_id
+            else:
+                p.trabajador_diario_id = trabajador_id
+            if proyecto_id:
+                p.proyecto_id = proyecto_id
+            p.save()
+            messages.success(request, f'✅ Permiso registrado correctamente ({p.dias_totales} día(s)).')
+            return redirect('permiso_ausencia_detail', pk=p.pk)
+
+        for e in errors:
+            messages.error(request, e)
+
+    return render(request, 'core/permisos/create.html', {
+        'colaboradores': colaboradores,
+        'trabajadores': trabajadores,
+        'proyectos': proyectos,
+        'tipo_choices': PermisoAusencia.TIPO_CHOICES,
+    })
+
+
+@login_required
+def permiso_ausencia_detail(request, pk):
+    """Detalle de un permiso."""
+    from core.models import PermisoAusencia
+    p = get_object_or_404(PermisoAusencia, pk=pk)
+    return render(request, 'core/permisos/detail.html', {'permiso': p})
+
+
+@login_required
+def permiso_ausencia_resolver(request, pk):
+    """Aprobar o rechazar un permiso (POST)."""
+    from core.models import PermisoAusencia
+    p = get_object_or_404(PermisoAusencia, pk=pk)
+
+    if request.method != 'POST':
+        return redirect('permiso_ausencia_detail', pk=pk)
+
+    accion = request.POST.get('accion')  # 'aprobar' | 'rechazar'
+    obs    = request.POST.get('observaciones', '').strip()
+
+    if accion not in ('aprobar', 'rechazar'):
+        messages.error(request, 'Acción no válida.')
+        return redirect('permiso_ausencia_detail', pk=pk)
+
+    p.estado = 'aprobado' if accion == 'aprobar' else 'rechazado'
+    p.aprobado_por       = request.user
+    p.observaciones_resolucion = obs
+    p.fecha_resolucion   = timezone.now()
+    p.save()
+
+    # Auto-marcar asistencia si se aprueba
+    if p.estado == 'aprobado':
+        from core.models import Asistencia
+        from datetime import timedelta
+        current = p.fecha_inicio
+        created = 0
+        while current <= p.fecha_fin:
+            if current.weekday() != 6:
+                kwargs_filter = {'fecha': current}
+                if p.colaborador:
+                    kwargs_filter['colaborador'] = p.colaborador
+                    kwargs_create = {
+                        'tipo_personal': 'colaborador',
+                        'colaborador': p.colaborador,
+                        'proyecto': p.proyecto,
+                        'fecha': current,
+                        'estado': 'permiso',
+                        'observaciones': f'Permiso #{p.pk}: {p.get_tipo_display()}',
+                        'registrado_por': request.user,
+                    }
+                else:
+                    kwargs_filter['trabajador_diario'] = p.trabajador_diario
+                    kwargs_create = {
+                        'tipo_personal': 'trabajador_diario',
+                        'trabajador_diario': p.trabajador_diario,
+                        'proyecto': p.proyecto,
+                        'fecha': current,
+                        'estado': 'permiso',
+                        'observaciones': f'Permiso #{p.pk}: {p.get_tipo_display()}',
+                        'registrado_por': request.user,
+                    }
+                if not Asistencia.objects.filter(**kwargs_filter).exists():
+                    Asistencia.objects.create(**kwargs_create)
+                    created += 1
+            current += timedelta(days=1)
+        if created:
+            messages.info(request, f'📋 Se marcaron {created} día(s) como "Permiso" en el módulo de Asistencias.')
+
+    estado_label = 'aprobado' if p.estado == 'aprobado' else 'rechazado'
+    icon = '✅' if p.estado == 'aprobado' else '❌'
+    messages.success(request, f'{icon} Permiso {estado_label} correctamente.')
+    return redirect('permiso_ausencia_detail', pk=pk)
+
+
+@login_required
+def permiso_ausencia_pdf(request, pk):
+    """Genera el PDF formal del permiso."""
+    from core.models import PermisoAusencia
+    from io import BytesIO
+    from reportlab.lib.pagesizes import letter
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors as rl_colors
+    from reportlab.lib.units import inch
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
+
+    p = get_object_or_404(PermisoAusencia, pk=pk)
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            rightMargin=0.9*inch, leftMargin=0.9*inch,
+                            topMargin=0.75*inch, bottomMargin=0.75*inch)
+
+    styles = getSampleStyleSheet()
+    azul   = rl_colors.HexColor('#1e3a5f')
+    gris   = rl_colors.HexColor('#6b7280')
+    verde  = rl_colors.HexColor('#16a34a')
+    rojo   = rl_colors.HexColor('#dc2626')
+    naranja= rl_colors.HexColor('#d97706')
+
+    title_style  = ParagraphStyle('title',  fontSize=18, fontName='Helvetica-Bold',  textColor=azul,  spaceAfter=4,  alignment=TA_CENTER)
+    sub_style    = ParagraphStyle('sub',    fontSize=10, fontName='Helvetica',       textColor=gris,  spaceAfter=2,  alignment=TA_CENTER)
+    label_style  = ParagraphStyle('label', fontSize=9,  fontName='Helvetica-Bold',  textColor=azul)
+    value_style  = ParagraphStyle('value', fontSize=10, fontName='Helvetica',       textColor=rl_colors.black)
+    body_style   = ParagraphStyle('body',  fontSize=10, fontName='Helvetica',       leading=14, spaceAfter=6)
+
+    color_estado = {'aprobado': verde, 'rechazado': rojo, 'pendiente': naranja}.get(p.estado, gris)
+    estado_txt   = p.get_estado_display().upper()
+
+    story = []
+
+    # — Encabezado —
+    story.append(Paragraph('CONSTRUCCIONES ARCA', title_style))
+    story.append(Paragraph('Sistema Administrativo · Recursos Humanos', sub_style))
+    story.append(Spacer(1, 0.1*inch))
+    story.append(HRFlowable(width='100%', thickness=2, color=azul))
+    story.append(Spacer(1, 0.15*inch))
+    story.append(Paragraph('CONSTANCIA DE PERMISO / AUSENCIA', ParagraphStyle('ct', fontSize=13, fontName='Helvetica-Bold', textColor=azul, alignment=TA_CENTER, spaceAfter=6)))
+    story.append(Paragraph(f'No. {p.pk:05d}', ParagraphStyle('num', fontSize=11, fontName='Helvetica', textColor=gris, alignment=TA_CENTER, spaceAfter=4)))
+
+    # Badge estado
+    estado_style = ParagraphStyle('est', fontSize=12, fontName='Helvetica-Bold', textColor=color_estado, alignment=TA_CENTER, spaceAfter=14)
+    story.append(Paragraph(f'[ {estado_txt} ]', estado_style))
+
+    # — Datos del personal —
+    story.append(HRFlowable(width='100%', thickness=0.5, color=rl_colors.HexColor('#e5e7eb')))
+    story.append(Spacer(1, 0.12*inch))
+
+    nombre  = p.get_nombre_personal()
+    tipo_p  = p.get_tipo_personal_display()
+    proyecto_nombre = p.proyecto.nombre if p.proyecto else '—'
+
+    datos = [
+        ['Personal:', nombre,                  'Tipo:',    tipo_p],
+        ['Proyecto:', proyecto_nombre,          'Registrado por:', p.registrado_por.get_full_name() if p.registrado_por else '—'],
+        ['Tipo de permiso:', p.get_tipo_display(), 'Días solicitados:', str(p.dias_totales)],
+        ['Fecha inicio:', str(p.fecha_inicio),  'Fecha fin:', str(p.fecha_fin)],
+    ]
+    col_widths = [1.3*inch, 2.5*inch, 1.5*inch, 1.5*inch]
+    tbl = Table(datos, colWidths=col_widths)
+    tbl.setStyle(TableStyle([
+        ('FONTNAME',  (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTNAME',  (2,0), (2,-1), 'Helvetica-Bold'),
+        ('FONTSIZE',  (0,0), (-1,-1), 9),
+        ('TEXTCOLOR', (0,0), (0,-1), azul),
+        ('TEXTCOLOR', (2,0), (2,-1), azul),
+        ('VALIGN',    (0,0), (-1,-1), 'TOP'),
+        ('TOPPADDING',(0,0), (-1,-1), 5),
+        ('BOTTOMPADDING',(0,0),(-1,-1), 5),
+        ('ROWBACKGROUNDS', (0,0), (-1,-1), [rl_colors.white, rl_colors.HexColor('#f9fafb')]),
+        ('LINEBELOW', (0,-1), (-1,-1), 0.5, rl_colors.HexColor('#e5e7eb')),
+    ]))
+    story.append(tbl)
+    story.append(Spacer(1, 0.2*inch))
+
+    # — Motivo —
+    story.append(Paragraph('Motivo / Justificación:', label_style))
+    story.append(Spacer(1, 0.05*inch))
+    story.append(Paragraph(p.motivo, body_style))
+
+    if p.documento_adjunto:
+        story.append(Paragraph(f'Referencia de documento: {p.documento_adjunto}', ParagraphStyle('doc', fontSize=9, textColor=gris, fontName='Helvetica-Oblique')))
+
+    story.append(Spacer(1, 0.2*inch))
+
+    # — Resolución —
+    if p.estado != 'pendiente':
+        story.append(HRFlowable(width='100%', thickness=0.5, color=rl_colors.HexColor('#e5e7eb')))
+        story.append(Spacer(1, 0.12*inch))
+        story.append(Paragraph('Resolución', ParagraphStyle('rh', fontSize=11, fontName='Helvetica-Bold', textColor=azul, spaceAfter=8)))
+        resolutor = p.aprobado_por.get_full_name() if p.aprobado_por else '—'
+        fecha_res = p.fecha_resolucion.strftime('%d/%m/%Y %H:%M') if p.fecha_resolucion else '—'
+        res_data = [
+            ['Estado:', estado_txt, 'Resuelto por:', resolutor],
+            ['Fecha resolución:', fecha_res, '', ''],
+        ]
+        tbl2 = Table(res_data, colWidths=col_widths)
+        tbl2.setStyle(TableStyle([
+            ('FONTNAME',  (0,0),(0,-1), 'Helvetica-Bold'),
+            ('FONTNAME',  (2,0),(2,-1), 'Helvetica-Bold'),
+            ('TEXTCOLOR', (0,0),(0,-1), azul),
+            ('TEXTCOLOR', (2,0),(2,-1), azul),
+            ('FONTSIZE',  (0,0),(-1,-1), 9),
+            ('TOPPADDING',(0,0),(-1,-1), 5),
+            ('BOTTOMPADDING',(0,0),(-1,-1), 5),
+        ]))
+        story.append(tbl2)
+        if p.observaciones_resolucion:
+            story.append(Spacer(1, 0.1*inch))
+            story.append(Paragraph('Observaciones:', label_style))
+            story.append(Paragraph(p.observaciones_resolucion, body_style))
+
+    # — Firmas —
+    story.append(Spacer(1, 0.5*inch))
+    story.append(HRFlowable(width='100%', thickness=0.5, color=rl_colors.HexColor('#e5e7eb')))
+    story.append(Spacer(1, 0.5*inch))
+    firma_style = ParagraphStyle('firma', fontSize=9, fontName='Helvetica', textColor=gris, alignment=TA_CENTER)
+    firmas = Table([
+        ['_______________________________', '       ', '_______________________________'],
+        ['Firma del Solicitante',           '       ', 'Firma del Autorizante'],
+        [nombre,                            '       ', resolutor if p.estado != 'pendiente' else ''],
+    ], colWidths=[2.5*inch, 1.5*inch, 2.5*inch])
+    firmas.setStyle(TableStyle([
+        ('ALIGN',   (0,0),(-1,-1), 'CENTER'),
+        ('FONTSIZE',(0,0),(-1,-1), 9),
+        ('TEXTCOLOR',(0,0),(-1,-1), gris),
+        ('TOPPADDING',(0,0),(-1,-1), 4),
+    ]))
+    story.append(firmas)
+
+    # — Pie —
+    story.append(Spacer(1, 0.3*inch))
+    from django.utils import timezone as tz
+    story.append(Paragraph(
+        f'Generado el {tz.now().strftime("%d/%m/%Y %H:%M")} por {request.user.get_full_name() or request.user.username} · Sistema ARCA Construcciones',
+        ParagraphStyle('foot', fontSize=7, textColor=gris, alignment=TA_CENTER)
+    ))
+
+    doc.build(story)
+    buffer.seek(0)
+
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="permiso_{p.pk:05d}_{p.get_nombre_personal().replace(" ","_")}.pdf"'
+    return response
+
+
 # ==================== MÓDULO DE ASISTENCIAS ====================
 
 @login_required

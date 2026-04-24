@@ -1,0 +1,164 @@
+{% extends "base.html" %}
+{% block title %}Permisos y Ausencias{% endblock %}
+
+{% block extra_css %}
+<style>
+:root{--primary:#2563eb;--border:#e5e7eb;--bg:#f9fafb;--text:#111827;--muted:#6b7280;}
+.page-header{background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;padding:2rem;border-radius:16px;margin-bottom:2rem;}
+.page-header h1{font-size:1.75rem;font-weight:700;margin:0 0 .4rem;}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:2rem;}
+.stat-card{background:white;border-radius:12px;padding:1.25rem 1.5rem;border:1px solid var(--border);display:flex;align-items:center;gap:1rem;}
+.stat-icon{width:48px;height:48px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0;}
+.stat-val{font-size:1.75rem;font-weight:700;line-height:1;}
+.stat-lbl{font-size:.85rem;color:var(--muted);font-weight:500;}
+.filters-bar{background:white;border:1px solid var(--border);border-radius:12px;padding:1.25rem 1.5rem;margin-bottom:1.5rem;display:flex;flex-wrap:wrap;gap:.75rem;align-items:flex-end;}
+.filters-bar .form-label{font-size:.8rem;font-weight:600;color:var(--muted);margin-bottom:.25rem;}
+.tbl-card{background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.tbl-header{padding:1.25rem 1.5rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.tbl-header h5{margin:0;font-size:1rem;font-weight:600;}
+table{width:100%;border-collapse:collapse;}
+th{background:var(--bg);padding:.7rem 1rem;font-size:.8rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);border-bottom:1px solid var(--border);text-align:left;}
+td{padding:.85rem 1rem;font-size:.9375rem;border-bottom:1px solid var(--border);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--bg);}
+.badge{padding:.3rem .7rem;border-radius:20px;font-size:.76rem;font-weight:600;}
+.empty-state{text-align:center;padding:3rem;color:var(--muted);}
+.empty-state i{font-size:3rem;opacity:.3;display:block;margin-bottom:.75rem;}
+.btn-sm-action{display:inline-flex;align-items:center;gap:.35rem;padding:.4rem .85rem;border-radius:6px;font-size:.82rem;font-weight:600;text-decoration:none;border:none;cursor:pointer;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1><i class="fas fa-calendar-minus me-2"></i>Permisos y Ausencias</h1>
+        <p style="margin:0;opacity:.85;">Gestión de permisos, ausencias e incapacidades del personal</p>
+      </div>
+      <a href="{% url 'permiso_ausencia_create' %}"
+         style="background:white;color:#1e40af;padding:.7rem 1.5rem;border-radius:8px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:.5rem;">
+        <i class="fas fa-plus"></i> Nuevo Permiso
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7;color:#d97706;"><i class="fas fa-clock"></i></div>
+      <div><div class="stat-val">{{ total_pendientes }}</div><div class="stat-lbl">Pendientes</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dcfce7;color:#16a34a;"><i class="fas fa-check-circle"></i></div>
+      <div><div class="stat-val">{{ total_aprobados }}</div><div class="stat-lbl">Aprobados</div></div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="fas fa-times-circle"></i></div>
+      <div><div class="stat-val">{{ total_rechazados }}</div><div class="stat-lbl">Rechazados</div></div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <form method="get" class="filters-bar">
+    <div>
+      <div class="form-label">Buscar</div>
+      <input type="text" name="busqueda" class="form-control form-control-sm" style="min-width:180px;"
+             placeholder="Nombre o motivo…" value="{{ filtros.busqueda }}">
+    </div>
+    <div>
+      <div class="form-label">Estado</div>
+      <select name="estado" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        <option value="pendiente" {% if filtros.estado == 'pendiente' %}selected{% endif %}>Pendiente</option>
+        <option value="aprobado"  {% if filtros.estado == 'aprobado'  %}selected{% endif %}>Aprobado</option>
+        <option value="rechazado" {% if filtros.estado == 'rechazado' %}selected{% endif %}>Rechazado</option>
+      </select>
+    </div>
+    <div>
+      <div class="form-label">Tipo</div>
+      <select name="tipo" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        {% for val, label in tipo_choices %}
+        <option value="{{ val }}" {% if filtros.tipo == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <div class="form-label">Proyecto</div>
+      <select name="proyecto" class="form-select form-select-sm">
+        <option value="">Todos</option>
+        {% for pr in proyectos %}
+        <option value="{{ pr.id }}" {% if filtros.proyecto == pr.id|stringformat:"s" %}selected{% endif %}>{{ pr.nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <div class="form-label">Mes</div>
+      <input type="month" name="mes" class="form-control form-control-sm" value="{{ filtros.mes }}">
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Filtrar</button>
+    <a href="{% url 'permisos_ausencia_list' %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+  </form>
+
+  <!-- Tabla -->
+  <div class="tbl-card">
+    <div class="tbl-header">
+      <h5><i class="fas fa-list me-2 text-primary"></i>Registros ({{ permisos.count }})</h5>
+    </div>
+    {% if permisos %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th><th>Personal</th><th>Tipo de Permiso</th>
+          <th>Fechas</th><th>Días</th><th>Estado</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in permisos %}
+        <tr>
+          <td style="color:var(--muted);font-size:.85rem;">{{ p.pk|stringformat:"05d" }}</td>
+          <td>
+            <div style="font-weight:600;">{{ p.nombre_personal }}</div>
+            <small style="color:var(--muted);">{{ p.get_tipo_personal_display }}{% if p.proyecto %} · {{ p.proyecto.nombre }}{% endif %}</small>
+          </td>
+          <td>
+            <span style="background:{{ p.get_tipo_badge_color }};color:white;padding:.25rem .65rem;border-radius:20px;font-size:.76rem;font-weight:600;">
+              {{ p.get_tipo_display }}
+            </span>
+          </td>
+          <td>
+            <div>{{ p.fecha_inicio|date:"d/m/Y" }}</div>
+            {% if p.fecha_inicio != p.fecha_fin %}
+            <small style="color:var(--muted);">al {{ p.fecha_fin|date:"d/m/Y" }}</small>
+            {% endif %}
+          </td>
+          <td style="text-align:center;font-weight:600;">{{ p.dias_totales }}</td>
+          <td><span class="badge {{ p.get_estado_badge_class }}">{{ p.get_estado_display }}</span></td>
+          <td>
+            <a href="{% url 'permiso_ausencia_detail' p.pk %}" class="btn-sm-action" style="background:#eff6ff;color:#2563eb;">
+              <i class="fas fa-eye"></i> Ver
+            </a>
+            <a href="{% url 'permiso_ausencia_pdf' p.pk %}" class="btn-sm-action" style="background:#f0fdf4;color:#16a34a;" target="_blank">
+              <i class="fas fa-file-pdf"></i> PDF
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fas fa-calendar-minus"></i>
+      <p>No hay permisos registrados con los filtros aplicados.</p>
+      <a href="{% url 'permiso_ausencia_create' %}" class="btn btn-primary mt-2">
+        <i class="fas fa-plus me-1"></i>Registrar primer permiso
+      </a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

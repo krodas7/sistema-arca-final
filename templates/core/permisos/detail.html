@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Permiso #{{ permiso.pk|stringformat:"05d" }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header{background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;padding:2rem;border-radius:16px;margin-bottom:2rem;}
+.detail-card{background:white;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:1.5rem;}
+.detail-section{padding:1rem 1.5rem;border-bottom:1px solid #e5e7eb;background:#f9fafb;font-weight:600;font-size:.95rem;color:#1e40af;}
+.detail-body{padding:1.5rem;}
+.info-row{display:flex;gap:.5rem;padding:.6rem 0;border-bottom:1px solid #f3f4f6;font-size:.9375rem;}
+.info-row:last-child{border-bottom:none;}
+.info-label{font-weight:600;color:#6b7280;min-width:160px;flex-shrink:0;font-size:.875rem;}
+.badge{padding:.35rem .8rem;border-radius:20px;font-size:.78rem;font-weight:600;}
+.action-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.2rem;border-radius:8px;font-weight:600;font-size:.9rem;text-decoration:none;border:none;cursor:pointer;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div>
+        <h1 style="font-size:1.75rem;font-weight:700;margin:0 0 .3rem;">
+          <i class="fas fa-calendar-minus me-2"></i>Permiso #{{ permiso.pk|stringformat:"05d" }}
+        </h1>
+        <p style="margin:0;opacity:.85;">{{ permiso.nombre_personal }} · {{ permiso.get_tipo_display }}</p>
+      </div>
+      <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+        <a href="{% url 'permiso_ausencia_pdf' permiso.pk %}" target="_blank"
+           class="action-btn" style="background:white;color:#16a34a;">
+          <i class="fas fa-file-pdf"></i> Descargar PDF
+        </a>
+        <a href="{% url 'permisos_ausencia_list' %}" class="action-btn" style="background:rgba(255,255,255,.2);color:white;">
+          <i class="fas fa-arrow-left"></i> Volver
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-lg-8">
+
+      <!-- Datos principales -->
+      <div class="detail-card">
+        <div class="detail-section"><i class="fas fa-user me-2"></i>Información del Personal</div>
+        <div class="detail-body">
+          <div class="info-row"><span class="info-label">Nombre:</span> <span style="font-weight:600;">{{ permiso.nombre_personal }}</span></div>
+          <div class="info-row"><span class="info-label">Tipo de personal:</span> {{ permiso.get_tipo_personal_display }}</div>
+          <div class="info-row"><span class="info-label">Proyecto:</span> {{ permiso.proyecto.nombre|default:"—" }}</div>
+        </div>
+      </div>
+
+      <div class="detail-card">
+        <div class="detail-section"><i class="fas fa-calendar-alt me-2"></i>Detalles del Permiso</div>
+        <div class="detail-body">
+          <div class="info-row">
+            <span class="info-label">Tipo de permiso:</span>
+            <span style="background:{{ permiso.get_tipo_badge_color }};color:white;padding:.25rem .75rem;border-radius:20px;font-size:.82rem;font-weight:600;">
+              {{ permiso.get_tipo_display }}
+            </span>
+          </div>
+          <div class="info-row"><span class="info-label">Fecha de inicio:</span> {{ permiso.fecha_inicio|date:"d \d\e F \d\e Y" }}</div>
+          <div class="info-row"><span class="info-label">Fecha de fin:</span> {{ permiso.fecha_fin|date:"d \d\e F \d\e Y" }}</div>
+          <div class="info-row"><span class="info-label">Días (sin domingos):</span> <strong>{{ permiso.dias_totales }}</strong></div>
+          <div class="info-row"><span class="info-label">Motivo:</span> <span>{{ permiso.motivo }}</span></div>
+          {% if permiso.documento_adjunto %}
+          <div class="info-row"><span class="info-label">Ref. documento:</span> {{ permiso.documento_adjunto }}</div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Resolución -->
+      {% if permiso.estado != 'pendiente' %}
+      <div class="detail-card">
+        <div class="detail-section"><i class="fas fa-gavel me-2"></i>Resolución</div>
+        <div class="detail-body">
+          <div class="info-row"><span class="info-label">Estado:</span> <span class="badge {{ permiso.get_estado_badge_class }}">{{ permiso.get_estado_display }}</span></div>
+          <div class="info-row"><span class="info-label">Resuelto por:</span> {{ permiso.aprobado_por.get_full_name|default:"—" }}</div>
+          <div class="info-row"><span class="info-label">Fecha:</span> {{ permiso.fecha_resolucion|date:"d/m/Y H:i"|default:"—" }}</div>
+          {% if permiso.observaciones_resolucion %}
+          <div class="info-row"><span class="info-label">Observaciones:</span> {{ permiso.observaciones_resolucion }}</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Sidebar acciones -->
+    <div class="col-lg-4">
+      <div class="detail-card" style="position:sticky;top:80px;">
+        <div class="detail-section"><i class="fas fa-cogs me-2"></i>Acciones</div>
+        <div class="detail-body">
+
+          <!-- Estado actual -->
+          <div style="text-align:center;margin-bottom:1.25rem;">
+            <span class="badge {{ permiso.get_estado_badge_class }}" style="font-size:1rem;padding:.5rem 1.25rem;">
+              {{ permiso.get_estado_display }}
+            </span>
+          </div>
+
+          {% if permiso.estado == 'pendiente' %}
+          <!-- Formulario de resolución -->
+          <form method="post" action="{% url 'permiso_ausencia_resolver' permiso.pk %}">
+            {% csrf_token %}
+            <div class="mb-3">
+              <label class="form-label" style="font-size:.85rem;font-weight:600;">Observaciones (opcional)</label>
+              <textarea name="observaciones" class="form-control form-control-sm" rows="3"
+                        placeholder="Motivo de aprobación o rechazo…"></textarea>
+            </div>
+            <div class="d-grid gap-2">
+              <button type="submit" name="accion" value="aprobar"
+                      class="btn btn-success"
+                      onclick="return confirm('¿Aprobar este permiso? Se marcará la asistencia automáticamente.')">
+                <i class="fas fa-check me-1"></i>Aprobar Permiso
+              </button>
+              <button type="submit" name="accion" value="rechazar"
+                      class="btn btn-danger"
+                      onclick="return confirm('¿Rechazar este permiso?')">
+                <i class="fas fa-times me-1"></i>Rechazar
+              </button>
+            </div>
+          </form>
+          {% else %}
+          <p style="font-size:.875rem;color:#6b7280;text-align:center;">Este permiso ya fue resuelto.</p>
+          {% endif %}
+
+          <hr>
+          <a href="{% url 'permiso_ausencia_pdf' permiso.pk %}" target="_blank"
+             class="btn btn-outline-success w-100 mb-2">
+            <i class="fas fa-file-pdf me-1"></i>Ver / Descargar PDF
+          </a>
+          <a href="{% url 'permisos_ausencia_list' %}" class="btn btn-outline-secondary w-100">
+            <i class="fas fa-arrow-left me-1"></i>Volver a la lista
+          </a>
+
+          <!-- Meta -->
+          <div style="margin-top:1.25rem;padding:.75rem;background:#f9fafb;border-radius:8px;font-size:.8rem;color:#6b7280;">
+            <div>Registrado: {{ permiso.fecha_registro|date:"d/m/Y H:i" }}</div>
+            <div>Por: {{ permiso.registrado_por.get_full_name|default:permiso.registrado_por }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

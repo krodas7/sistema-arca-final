@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Permiso{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header{background:linear-gradient(135deg,#1e40af,#3b82f6);color:white;padding:2rem;border-radius:16px;margin-bottom:2rem;}
+.form-card{background:white;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin-bottom:1.5rem;}
+.form-section-header{padding:1rem 1.5rem;border-bottom:1px solid #e5e7eb;background:#f9fafb;font-weight:600;font-size:.95rem;color:#1e40af;}
+.form-body{padding:1.5rem;}
+.form-label{font-weight:600;font-size:.875rem;color:#374151;margin-bottom:.4rem;}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+  <div class="page-header">
+    <h1 style="font-size:1.75rem;font-weight:700;margin:0 0 .3rem;"><i class="fas fa-calendar-plus me-2"></i>Nuevo Permiso / Ausencia</h1>
+    <p style="margin:0;opacity:.85;">Complete los datos del permiso o ausencia del personal</p>
+  </div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="row g-4">
+      <div class="col-lg-8">
+
+        <!-- Personal -->
+        <div class="form-card">
+          <div class="form-section-header"><i class="fas fa-user me-2"></i>Datos del Personal</div>
+          <div class="form-body">
+            <div class="mb-3">
+              <label class="form-label">Tipo de Personal *</label>
+              <div class="d-flex gap-3">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="tipo_personal" id="tp_col" value="colaborador" checked
+                         onchange="togglePersonal(this.value)">
+                  <label class="form-check-label" for="tp_col">Colaborador</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="tipo_personal" id="tp_td" value="trabajador_diario"
+                         onchange="togglePersonal(this.value)">
+                  <label class="form-check-label" for="tp_td">Trabajador Diario</label>
+                </div>
+              </div>
+            </div>
+            <div class="row g-3">
+              <div class="col-md-6" id="col_colaborador">
+                <label class="form-label">Colaborador *</label>
+                <select name="colaborador_id" class="form-select">
+                  <option value="">— Seleccionar —</option>
+                  {% for c in colaboradores %}
+                  <option value="{{ c.id }}">{{ c.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6 d-none" id="col_trabajador">
+                <label class="form-label">Trabajador Diario *</label>
+                <select name="trabajador_id" class="form-select">
+                  <option value="">— Seleccionar —</option>
+                  {% for t in trabajadores %}
+                  <option value="{{ t.id }}">{{ t.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label">Proyecto (opcional)</label>
+                <select name="proyecto_id" class="form-select">
+                  <option value="">— Sin proyecto —</option>
+                  {% for pr in proyectos %}
+                  <option value="{{ pr.id }}">{{ pr.nombre }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Permiso -->
+        <div class="form-card">
+          <div class="form-section-header"><i class="fas fa-calendar-alt me-2"></i>Detalles del Permiso</div>
+          <div class="form-body">
+            <div class="row g-3">
+              <div class="col-md-6">
+                <label class="form-label">Tipo de Permiso *</label>
+                <select name="tipo" class="form-select" required>
+                  <option value="">— Seleccionar —</option>
+                  {% for val, label in tipo_choices %}
+                  <option value="{{ val }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fecha de Inicio *</label>
+                <input type="date" name="fecha_inicio" class="form-control" required
+                       id="fInicio" onchange="calcDias()">
+              </div>
+              <div class="col-md-3">
+                <label class="form-label">Fecha de Fin *</label>
+                <input type="date" name="fecha_fin" class="form-control" required
+                       id="fFin" onchange="calcDias()">
+              </div>
+              <div class="col-12">
+                <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:.75rem 1rem;font-size:.9rem;color:#1e40af;">
+                  <i class="fas fa-info-circle me-1"></i>
+                  Días estimados (sin domingos): <strong id="diasEstimados">—</strong>
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Motivo / Justificación *</label>
+                <textarea name="motivo" class="form-control" rows="4" required
+                          placeholder="Describa el motivo del permiso o ausencia…"></textarea>
+              </div>
+              <div class="col-12">
+                <label class="form-label">Referencia de documento (opcional)</label>
+                <input type="text" name="documento_adjunto" class="form-control"
+                       placeholder="Ej: No. de constancia médica, carta, etc.">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Sidebar acciones -->
+      <div class="col-lg-4">
+        <div class="form-card" style="position:sticky;top:80px;">
+          <div class="form-section-header"><i class="fas fa-paper-plane me-2"></i>Guardar</div>
+          <div class="form-body d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fas fa-save me-2"></i>Registrar Permiso
+            </button>
+            <a href="{% url 'permisos_ausencia_list' %}" class="btn btn-outline-secondary">
+              <i class="fas fa-times me-1"></i>Cancelar
+            </a>
+            <div style="background:#fef3c7;border-radius:8px;padding:.75rem;font-size:.82rem;color:#92400e;margin-top:.5rem;">
+              <i class="fas fa-lightbulb me-1"></i>
+              El permiso se guardará en estado <strong>Pendiente</strong>. Luego podrás aprobarlo o rechazarlo.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </form>
+</div>
+
+<script>
+function togglePersonal(tipo) {
+  document.getElementById('col_colaborador').classList.toggle('d-none', tipo !== 'colaborador');
+  document.getElementById('col_trabajador').classList.toggle('d-none', tipo !== 'trabajador_diario');
+}
+function calcDias() {
+  const fi = document.getElementById('fInicio').value;
+  const ff = document.getElementById('fFin').value;
+  const el = document.getElementById('diasEstimados');
+  if (!fi || !ff) { el.textContent = '—'; return; }
+  let start = new Date(fi + 'T00:00:00'), end = new Date(ff + 'T00:00:00');
+  if (end < start) { el.textContent = '⚠ La fecha fin es anterior al inicio'; return; }
+  let dias = 0;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate()+1))
+    if (d.getDay() !== 0) dias++;
+  el.textContent = dias + (dias === 1 ? ' día' : ' días');
+}
+</script>
+{% endblock %}
