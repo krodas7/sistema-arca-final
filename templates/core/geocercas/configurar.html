@@ -275,11 +275,31 @@ if (GEOCERCA_ACTUAL) {
 // ===================== MAPA =====================
 const map = L.map('map').setView([defaultLat, defaultLng], defaultZoom);
 
-L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+const capaCalles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a> © <a href="https://carto.com">CARTO</a>',
     subdomains: 'abcd',
     maxZoom: 19
-}).addTo(map);
+});
+
+const capaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '© <a href="https://www.esri.com">Esri</a> — Esri, DigitalGlobe, GeoEye, i-cubed, USDA FSA, USGS, AEX, Getmapping, Aerogrid, IGN, IGP, swisstopo, GIS User Community',
+    maxZoom: 19
+});
+
+const capaHibrido = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: '© Esri',
+    maxZoom: 19,
+    opacity: 1
+});
+
+// Satélite activo por defecto
+capaSatelite.addTo(map);
+
+// Control de capas
+L.control.layers({
+    '<i class="fas fa-satellite" style="color:#2563eb"></i> Satélite': capaSatelite,
+    '<i class="fas fa-road" style="color:#374151"></i> Calles': capaCalles,
+}, {}, { position: 'topright', collapsed: false }).addTo(map);
 
 // Marcador de referencia Los Amates
 L.marker([15.2672, -89.0969], {
