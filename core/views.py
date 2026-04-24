@@ -9717,3 +9717,102 @@ def aws_webhook_registro_usuario(request):
     except Exception as e:
         logger.error(f'Error procesando webhook AWS: {e}')
         return JsonResponse({'ok': False, 'error': str(e)}, status=500)
+
+
+# ===========================================================================
+# API v1 — Endpoints para la App Móvil Android
+# Solo lectura. No modifican ningún dato existente.
+# ===========================================================================
+
+@login_required
+def api_v1_projects_for_app(request):
+    """
+    GET /api/v1/projects/for-app/
+    Retorna la lista de proyectos activos para que la app móvil
+    los muestre al trabajador al iniciar sesión.
+    Formato esperado por el app: { "results": [{ "id", "name", "code" }] }
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre').values('id', 'nombre')
+    results = [
+        {
+            'id': p['id'],
+            'name': p['nombre'],
+            'code': str(p['id']),
+        }
+        for p in proyectos
+    ]
+    return JsonResponse({'count': len(results), 'results': results})
+
+
+def api_v1_geofences_by_project(request):
+    """
+    GET /api/v1/geofences/by_project/?project_id=<id>
+    Retorna la geocerca activa del proyecto para que la app valide
+    si el trabajador está dentro antes de registrar asistencia.
+    No requiere login porque la app puede llamarlo sin sesión Django
+    (usa autenticación propia en AWS).
+    Formato esperado por el app (GeofenceDto):
+    {
+        "count": 1,
+        "results": [{
+            "id": 1,
+            "name": "Geocerca Proyecto X",
+            "geofence_type": "circle" | "polygon",
+            "center_latitude": 15.2672,
+            "center_longitude": -89.0969,
+            "radius_meters": 100.0,
+            "polygon_coordinates": [[lat, lng], ...],
+            "is_active": true,
+            "is_required": true,
+            "project": <project_id>
+        }]
+    }
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Método no permitido'}, status=405)
+
+    project_id = request.GET.get('project_id', '').strip()
+    if not project_id:
+        return JsonResponse({'count': 0, 'results': []})
+
+    try:
+        geo = GeocercaProyecto.objects.select_related('proyecto').get(
+            proyecto_id=int(project_id),
+            activa=True,
+        )
+    except (GeocercaProyecto.DoesNotExist, ValueError):
+        return JsonResponse({'count': 0, 'results': []})
+
+    cfg = geo.configuracion
+    if geo.tipo == 'circle':
+        geofence_data = {
+            'id': geo.id,
+            'name': f'Geocerca — {geo.proyecto.nombre}',
+            'geofence_type': 'circle',
+            'center_latitude': float(cfg.get('lat', 0)),
+            'center_longitude': float(cfg.get('lng', 0)),
+            'radius_meters': float(cfg.get('radiusMeters', 100)),
+            'polygon_coordinates': None,
+            'is_active': True,
+            'is_required': True,
+            'project': geo.proyecto_id,
+        }
+    else:
+        coords = cfg.get('coordinates', [])
+        geofence_data = {
+            'id': geo.id,
+            'name': f'Geocerca — {geo.proyecto.nombre}',
+            'geofence_type': 'polygon',
+            'center_latitude': None,
+            'center_longitude': None,
+            'radius_meters': None,
+            'polygon_coordinates': coords,
+            'is_active': True,
+            'is_required': True,
+            'project': geo.proyecto_id,
+        }
+
+    return JsonResponse({'count': 1, 'results': [geofence_data]})

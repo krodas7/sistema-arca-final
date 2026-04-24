@@ -304,4 +304,9 @@ urlpatterns = [
     path('rekognition/trabajadores/', views.rekognition_trabajadores, name='rekognition_trabajadores'),
     path('rekognition/trabajadores/<int:trabajador_id>/registrar/', views.rekognition_registrar, name='rekognition_registrar'),
     path('rekognition/usuarios/<str:user_id>/eliminar/', views.rekognition_eliminar_usuario, name='rekognition_eliminar_usuario'),
+
+    # ==================== API v1 — App Móvil Android ====================
+    # Solo lectura. No modifican datos existentes.
+    path('api/v1/projects/for-app/', views.api_v1_projects_for_app, name='api_v1_projects_for_app'),
+    path('api/v1/geofences/by_project/', views.api_v1_geofences_by_project, name='api_v1_geofences_by_project'),
 ]
