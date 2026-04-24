@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% block title %}Configurar Geocerca — {{ proyecto.nombre }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+    .page-header {
+        background: linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);
+        color: white; padding: 1.75rem 2rem; border-radius: 16px; margin-bottom: 1.5rem;
+    }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .25rem; }
+    .page-header p  { margin: 0; opacity: .85; font-size: .95rem; }
+
+    #map {
+        height: 480px; border-radius: 12px;
+        border: 2px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+    }
+
+    .config-card {
+        background: white; border-radius: 12px; border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 1.5rem;
+    }
+
+    .tabs-geo { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+    .tab-btn {
+        flex: 1; padding: .65rem 1rem; border: 2px solid #e5e7eb; background: #f8fafc;
+        border-radius: 10px; font-weight: 600; font-size: .9rem; cursor: pointer;
+        transition: all .15s; color: #6b7280;
+    }
+    .tab-btn.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
+    .tab-btn:hover:not(.active) { border-color: #93c5fd; }
+
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    .map-tip {
+        background: #eff6ff; border-left: 3px solid #2563eb;
+        border-radius: 0 8px 8px 0; padding: .75rem 1rem;
+        font-size: .85rem; color: #1e40af; margin-bottom: 1rem;
+    }
+
+    .coords-display {
+        background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px;
+        padding: .75rem 1rem; font-family: monospace; font-size: .85rem;
+        color: #374151; min-height: 2.5rem;
+    }
+
+    .geocerca-actual {
+        background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+        padding: 1rem; margin-bottom: 1rem;
+    }
+
+    .radio-slider { width: 100%; accent-color: #2563eb; }
+
+    .circle-preview {
+        display: inline-block; width: 14px; height: 14px;
+        background: rgba(37,99,235,.2); border: 2px solid #2563eb;
+        border-radius: 50%; vertical-align: middle; margin-right: .4rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+    <!-- Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h1><i class="fas fa-map-marker-alt me-2"></i>Geocerca — {{ proyecto.nombre }}</h1>
+                <p>Define la zona donde los trabajadores pueden registrar asistencia. ID proyecto: <strong>{{ proyecto.id }}</strong></p>
+            </div>
+            <a href="{% url 'geocercas_list' %}" class="btn btn-light btn-sm">
+                <i class="fas fa-arrow-left me-1"></i>Volver a geocercas
+            </a>
+        </div>
+    </div>
+
+    <div class="row g-3">
+
+        <!-- Mapa -->
+        <div class="col-lg-7">
+            <div id="map"></div>
+            <small class="text-muted mt-2 d-block">
+                <i class="fas fa-info-circle me-1 text-primary"></i>
+                <strong>Círculo:</strong> clic para fijar el centro &nbsp;|&nbsp;
+                <strong>Polígono:</strong> clic para agregar puntos, doble clic para cerrar
+            </small>
+        </div>
+
+        <!-- Panel de configuración -->
+        <div class="col-lg-5">
+
+            {% if geocerca_actual %}
+            <div class="geocerca-actual mb-3">
+                <strong><i class="fas fa-check-circle text-success me-1"></i>Geocerca actual:</strong>
+                {{ geocerca_actual.resumen }}
+            </div>
+            {% endif %}
+
+            <div class="config-card">
+                <!-- Tabs tipo -->
+                <div class="tabs-geo">
+                    <button class="tab-btn active" onclick="switchTab('circulo', this)">
+                        <i class="fas fa-circle me-1"></i>Círculo
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('poligono', this)">
+                        <i class="fas fa-draw-polygon me-1"></i>Polígono
+                    </button>
+                </div>
+
+                <!-- TAB CÍRCULO -->
+                <div id="tab-circulo" class="tab-content active">
+                    <div class="map-tip">
+                        <i class="fas fa-mouse-pointer me-1"></i>
+                        Haz clic en el mapa para fijar el <strong>centro</strong>. Ajusta el radio con el deslizador.
+                    </div>
+                    <form method="post" action="{% url 'geocerca_proyecto_guardar' proyecto.id %}" id="form-circulo">
+                        {% csrf_token %}
+                        <input type="hidden" name="tipo_geocerca" value="circulo">
+                        <input type="hidden" name="redirect_to" value="geocercas_list">
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold mb-1">Latitud</label>
+                                <input type="text" name="lat" id="c-lat" class="form-control" placeholder="15.6356" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold mb-1">Longitud</label>
+                                <input type="text" name="lng" id="c-lng" class="form-control" placeholder="-90.5069" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold mb-1">
+                                Radio: <span id="radio-label">100</span> metros
+                            </label>
+                            <input type="range" name="radio_metros" id="radio-slider" class="radio-slider"
+                                   min="20" max="2000" step="10" value="100">
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-save me-1"></i>Guardar geocerca circular
+                        </button>
+                    </form>
+                </div>
+
+                <!-- TAB POLÍGONO -->
+                <div id="tab-poligono" class="tab-content">
+                    <div class="map-tip">
+                        <i class="fas fa-mouse-pointer me-1"></i>
+                        Haz clic en el mapa para agregar puntos del polígono. <strong>Doble clic</strong> para cerrar y guardar.
+                    </div>
+                    <form method="post" action="{% url 'geocerca_proyecto_guardar' proyecto.id %}" id="form-poligono">
+                        {% csrf_token %}
+                        <input type="hidden" name="tipo_geocerca" value="poligono">
+                        <input type="hidden" name="redirect_to" value="geocercas_list">
+                        <input type="hidden" name="coordenadas_json" id="poligono-json">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold mb-1">Puntos del polígono</label>
+                            <div class="coords-display" id="puntos-display">Sin puntos aún</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="limpiarPoligono()">
+                                <i class="fas fa-trash me-1"></i>Limpiar
+                            </button>
+                            <button type="submit" class="btn btn-primary flex-grow-1" id="btn-guardar-poligono" disabled>
+                                <i class="fas fa-save me-1"></i>Guardar polígono
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div><!-- /config-card -->
+        </div><!-- /col -->
+    </div><!-- /row -->
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ===================== CONFIGURACIÓN INICIAL =====================
+const PROYECTO_ID = {{ proyecto.id }};
+{% if geocerca_json %}
+const GEOCERCA_ACTUAL = {{ geocerca_json|safe }};
+{% else %}
+const GEOCERCA_ACTUAL = null;
+{% endif %}
+
+// Centro por defecto: Guatemala
+let defaultLat = 15.6356, defaultLng = -90.5069, defaultZoom = 13;
+
+if (GEOCERCA_ACTUAL) {
+    const c = GEOCERCA_ACTUAL.centro;
+    defaultLat = c[0]; defaultLng = c[1]; defaultZoom = 15;
+}
+
+// ===================== MAPA =====================
+const map = L.map('map').setView([defaultLat, defaultLng], defaultZoom);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 19
+}).addTo(map);
+
+// ===================== ESTADO =====================
+let modoActivo = 'circulo';  // 'circulo' | 'poligono'
+let circleMarker = null, circleShape = null;
+let polyMarkers = [], polyLayer = null, polyPoints = [];
+
+// ===================== GEOCERCA ACTUAL EN MAPA =====================
+function mostrarGeocercaActual() {
+    if (!GEOCERCA_ACTUAL) return;
+    const tipo = GEOCERCA_ACTUAL.tipo;
+    const cfg  = GEOCERCA_ACTUAL.configuracion;
+
+    if (tipo === 'circle') {
+        const lat = cfg.lat, lng = cfg.lng, r = cfg.radiusMeters;
+        L.circle([lat, lng], { radius: r, color: '#22c55e', fillOpacity: 0.12, dashArray: '6' }).addTo(map)
+         .bindTooltip('Geocerca actual', { permanent: false });
+        L.marker([lat, lng]).addTo(map).bindTooltip('Centro actual');
+    } else if (tipo === 'polygon') {
+        const coords = cfg.coordinates.map(p => [parseFloat(p[0]), parseFloat(p[1])]);
+        L.polygon(coords, { color: '#22c55e', fillOpacity: 0.12, dashArray: '6' }).addTo(map)
+         .bindTooltip('Geocerca actual');
+    }
+}
+mostrarGeocercaActual();
+
+// ===================== TABS =====================
+function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+    modoActivo = tab;
+    limpiarPoligono();
+    if (circleMarker) { map.removeLayer(circleMarker); circleMarker = null; }
+    if (circleShape)  { map.removeLayer(circleShape);  circleShape  = null; }
+}
+
+// ===================== CÍRCULO =====================
+const radioSlider = document.getElementById('radio-slider');
+const radioLabel  = document.getElementById('radio-label');
+const cLat = document.getElementById('c-lat');
+const cLng = document.getElementById('c-lng');
+
+radioSlider.addEventListener('input', () => {
+    radioLabel.textContent = radioSlider.value;
+    redrawCircle();
+});
+
+function redrawCircle() {
+    const lat = parseFloat(cLat.value), lng = parseFloat(cLng.value), r = parseInt(radioSlider.value);
+    if (isNaN(lat) || isNaN(lng)) return;
+    if (circleMarker) map.removeLayer(circleMarker);
+    if (circleShape)  map.removeLayer(circleShape);
+    circleMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    circleShape  = L.circle([lat, lng], { radius: r, color: '#2563eb', fillOpacity: 0.15 }).addTo(map);
+    circleMarker.on('drag', e => {
+        const p = e.target.getLatLng();
+        cLat.value = p.lat.toFixed(6);
+        cLng.value = p.lng.toFixed(6);
+        circleShape.setLatLng(p);
+    });
+}
+
+// ===================== POLÍGONO =====================
+function limpiarPoligono() {
+    polyPoints = [];
+    polyMarkers.forEach(m => map.removeLayer(m));
+    polyMarkers = [];
+    if (polyLayer) { map.removeLayer(polyLayer); polyLayer = null; }
+    document.getElementById('puntos-display').textContent = 'Sin puntos aún';
+    document.getElementById('btn-guardar-poligono').disabled = true;
+    document.getElementById('poligono-json').value = '';
+}
+
+function actualizarPoligono() {
+    const display = polyPoints.map((p, i) => `P${i+1}: ${p[0].toFixed(5)}, ${p[1].toFixed(5)}`).join('\n');
+    document.getElementById('puntos-display').textContent = display || 'Sin puntos aún';
+    document.getElementById('btn-guardar-poligono').disabled = polyPoints.length < 3;
+    document.getElementById('poligono-json').value = JSON.stringify(polyPoints);
+
+    if (polyLayer) map.removeLayer(polyLayer);
+    if (polyPoints.length >= 2) {
+        polyLayer = L.polygon(polyPoints, { color: '#7c3aed', fillOpacity: 0.15 }).addTo(map);
+    }
+}
+
+// ===================== CLICK EN MAPA =====================
+map.on('click', e => {
+    const { lat, lng } = e.latlng;
+    if (modoActivo === 'circulo') {
+        cLat.value = lat.toFixed(6);
+        cLng.value = lng.toFixed(6);
+        redrawCircle();
+        map.setView([lat, lng], map.getZoom());
+    } else if (modoActivo === 'poligono') {
+        polyPoints.push([lat, lng]);
+        const m = L.circleMarker([lat, lng], { radius: 6, color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 1 }).addTo(map);
+        m.bindTooltip(`P${polyPoints.length}`);
+        polyMarkers.push(m);
+        actualizarPoligono();
+    }
+});
+
+// Doble clic en polígono = cerrar y preparar guardado
+map.on('dblclick', e => {
+    if (modoActivo === 'poligono' && polyPoints.length >= 3) {
+        L.DomEvent.stop(e);
+        document.getElementById('btn-guardar-poligono').disabled = false;
+        document.getElementById('btn-guardar-poligono').textContent = '✅ Listo — clic para guardar';
+        document.getElementById('btn-guardar-poligono').disabled = false;
+    }
+});
+
+// Pre-cargar geocerca actual en campos si es círculo
+if (GEOCERCA_ACTUAL && GEOCERCA_ACTUAL.tipo === 'circle') {
+    const cfg = GEOCERCA_ACTUAL.configuracion;
+    cLat.value = cfg.lat;
+    cLng.value = cfg.lng;
+    radioSlider.value = cfg.radiusMeters;
+    radioLabel.textContent = cfg.radiusMeters;
+    redrawCircle();
+}
+</script>
+{% endblock %}

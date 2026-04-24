@@ -83,6 +83,24 @@ def eliminar_geocerca(project_id: int) -> dict:
     })
 
 
+def obtener_geocerca_proyecto(project_id: int) -> dict | None:
+    """Obtiene la geocerca activa de un proyecto desde Django DB (fuente local de verdad)."""
+    try:
+        from core.models import GeocercaProyecto
+        g = GeocercaProyecto.objects.select_related('proyecto').get(
+            proyecto_id=project_id, activa=True
+        )
+        return {
+            'tipo': g.tipo,
+            'configuracion': g.configuracion,
+            'resumen': g.resumen,
+            'centro': g.centro,
+            'actualizado_en': g.actualizado_en,
+        }
+    except Exception:
+        return None
+
+
 # ==================== ASISTENCIAS ====================
 
 def obtener_asistencias_proyecto(project_id: int) -> list:

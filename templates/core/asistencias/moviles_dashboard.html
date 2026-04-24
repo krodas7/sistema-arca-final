@@ -1,98 +1,86 @@
 {% extends "base.html" %}
-
-{% block title %}Asistencias Móviles (App) - Sistema ARCA{% endblock %}
+{% block title %}Asistencias App Móvil{% endblock %}
 
 {% block extra_css %}
 <style>
     :root {
-        --primary: #2563eb;
-        --success: #16a34a;
-        --danger: #dc2626;
-        --warning: #d97706;
         --border: #e5e7eb;
-        --bg-light: #f9fafb;
-        --text-primary: #111827;
         --text-secondary: #6b7280;
     }
-
     .page-header {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 16px;
-        margin-bottom: 2rem;
+        background: linear-gradient(135deg,#1e3a5f 0%,#2563eb 100%);
+        color: white; padding: 1.75rem 2rem; border-radius: 16px; margin-bottom: 1.5rem;
     }
-    .page-header h1 { font-size: 1.75rem; font-weight: 700; margin: 0 0 0.4rem 0; }
-    .page-header p { margin: 0; opacity: 0.85; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 .25rem; }
+    .page-header p  { margin: 0; opacity: .85; }
 
     .filter-card {
-        background: white;
-        border-radius: 12px;
-        padding: 1.25rem 1.5rem;
-        border: 1px solid var(--border);
-        box-shadow: 0 1px 3px rgba(0,0,0,.06);
-        margin-bottom: 1.5rem;
+        background: white; border-radius: 12px; border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;
     }
 
-    .badge-tipo {
-        display: inline-block;
-        padding: 0.25em 0.75em;
-        border-radius: 9999px;
-        font-size: .75rem;
-        font-weight: 600;
+    /* Timeline card por trabajador/día */
+    .timeline-card {
+        background: white; border-radius: 12px; border: 1px solid var(--border);
+        box-shadow: 0 1px 3px rgba(0,0,0,.06); margin-bottom: 1rem; overflow: hidden;
     }
-    .badge-entry   { background: #dcfce7; color: #166534; }
-    .badge-exit    { background: #fee2e2; color: #991b1b; }
-    .badge-lunch_out { background: #fef3c7; color: #92400e; }
-    .badge-lunch_in  { background: #dbeafe; color: #1e40af; }
+    .timeline-header {
+        display: flex; align-items: center; justify-content: space-between;
+        padding: .85rem 1.25rem; border-bottom: 1px solid #f1f5f9; gap: 1rem;
+    }
+    .worker-avatar {
+        width: 38px; height: 38px; border-radius: 50%; background: linear-gradient(135deg,#3b82f6,#1d4ed8);
+        color: white; font-weight: 700; display: flex; align-items: center; justify-content: center;
+        font-size: 1rem; flex-shrink: 0;
+    }
+    .worker-info { flex: 1; min-width: 0; }
+    .worker-name { font-weight: 600; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .worker-date { font-size: .8rem; color: var(--text-secondary); }
 
-    .table-card {
-        background: white;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        box-shadow: 0 1px 3px rgba(0,0,0,.06);
-        overflow: hidden;
+    .horas-badge {
+        display: inline-flex; align-items: center; gap: .3rem;
+        background: #f0fdf4; color: #166534; border-radius: 9999px;
+        padding: .25em .85em; font-size: .8rem; font-weight: 700;
     }
-    .table-card table { margin: 0; }
-    .table-card thead th {
-        background: #f1f5f9;
-        font-size: .8rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-transform: uppercase;
-        letter-spacing: .05em;
-        border-bottom: 1px solid var(--border);
-        padding: .75rem 1rem;
+    .horas-badge.en-trabajo { background: #eff6ff; color: #1e40af; }
+    .horas-badge.en-almuerzo { background: #fef3c7; color: #92400e; }
+    .horas-badge.sin-datos { background: #f9fafb; color: #6b7280; }
+
+    /* Marcas (entry, lunch_out, lunch_in, exit) */
+    .marks-row {
+        display: flex; gap: 0; padding: .75rem 1.25rem;
+        align-items: center; flex-wrap: wrap; gap: .5rem;
     }
-    .table-card tbody td { padding: .75rem 1rem; vertical-align: middle; font-size: .9rem; border-bottom: 1px solid #f1f5f9; }
-    .table-card tbody tr:last-child td { border-bottom: none; }
+    .mark-item {
+        display: flex; flex-direction: column; align-items: center; gap: .2rem;
+        min-width: 90px; flex: 1;
+    }
+    .mark-icon {
+        width: 40px; height: 40px; border-radius: 50%; display: flex;
+        align-items: center; justify-content: center; font-size: 1rem;
+    }
+    .mark-hora { font-weight: 700; font-size: .9rem; }
+    .mark-label { font-size: .7rem; color: var(--text-secondary); text-align: center; }
+    .mark-empty .mark-icon { background: #f1f5f9; color: #d1d5db; }
+    .mark-empty .mark-hora { color: #d1d5db; }
+
+    .mark-entry    .mark-icon { background: #dcfce7; color: #16a34a; }
+    .mark-exit     .mark-icon { background: #fee2e2; color: #dc2626; }
+    .mark-lunch_out .mark-icon { background: #fef3c7; color: #d97706; }
+    .mark-lunch_in  .mark-icon { background: #dbeafe; color: #2563eb; }
+
+    .mark-arrow { color: #d1d5db; font-size: 1.2rem; flex-shrink: 0; }
+
+    .mark-location { font-size: .7rem; margin-top: .1rem; }
 
     .empty-state {
-        text-align: center;
-        padding: 4rem 2rem;
-        color: var(--text-secondary);
+        text-align: center; padding: 4rem 2rem; color: var(--text-secondary);
     }
     .empty-state i { font-size: 3rem; margin-bottom: 1rem; display: block; }
 
-    .stat-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: .4rem;
-        background: #eff6ff;
-        color: #1d4ed8;
-        border-radius: 9999px;
-        padding: .35rem .85rem;
-        font-size: .85rem;
-        font-weight: 600;
-    }
-
     .alert-aws {
-        background: #fef3c7;
-        border-left: 4px solid #f59e0b;
-        border-radius: 8px;
-        padding: 1rem 1.25rem;
-        margin-bottom: 1.5rem;
-        font-size: .9rem;
+        background: #fef3c7; border-left: 4px solid #f59e0b;
+        border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; font-size: .9rem;
     }
 </style>
 {% endblock %}
@@ -104,32 +92,52 @@
     <div class="page-header">
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
-                <h1><i class="fas fa-mobile-alt me-2"></i>Asistencias App Móvil</h1>
-                <p>Registros de asistencia capturados con reconocimiento facial desde la aplicación móvil</p>
+                <h1><i class="fas fa-mobile-alt me-2"></i>Asistencias — App Móvil</h1>
+                <p>Registros con reconocimiento facial: entrada, almuerzo y salida en tiempo real</p>
             </div>
-            <a href="{% url 'asistencias_dashboard' %}" class="btn btn-light btn-sm">
-                <i class="fas fa-arrow-left me-1"></i> Asistencias manuales
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{% url 'geocercas_list' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-map-marker-alt me-1"></i>Geocercas
+                </a>
+                <a href="{% url 'asistencias_dashboard' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-clipboard-check me-1"></i>Asistencias manuales
+                </a>
+            </div>
         </div>
     </div>
 
-    <!-- Filtro de proyecto -->
+    <!-- Filtros -->
     <div class="filter-card">
         <form method="get" class="row g-3 align-items-end">
             <div class="col-md-5">
-                <label class="form-label fw-semibold mb-1"><i class="fas fa-project-diagram me-1 text-primary"></i>Seleccionar Proyecto</label>
+                <label class="form-label fw-semibold mb-1">
+                    <i class="fas fa-project-diagram me-1 text-primary"></i>Proyecto
+                </label>
                 <select name="proyecto" class="form-select" onchange="this.form.submit()">
                     <option value="">-- Selecciona un proyecto --</option>
                     {% for p in proyectos %}
-                    <option value="{{ p.id }}" {% if proyecto_sel and proyecto_sel.id == p.id %}selected{% endif %}>{{ p.nombre }}</option>
+                    <option value="{{ p.id }}" {% if proyecto_sel and proyecto_sel.id == p.id %}selected{% endif %}>
+                        {{ p.nombre }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
             {% if proyecto_sel %}
-            <div class="col-auto">
-                <span class="stat-pill">
-                    <i class="fas fa-list-check"></i>
-                    {{ total_registros }} registro{{ total_registros|pluralize }}
+            <div class="col-md-3">
+                <label class="form-label fw-semibold mb-1">
+                    <i class="fas fa-calendar me-1 text-primary"></i>Fecha
+                </label>
+                <input type="date" name="fecha" class="form-control" value="{{ fecha_filtro }}"
+                       onchange="this.form.submit()">
+            </div>
+            <div class="col-auto d-flex align-items-end">
+                <a href="?proyecto={{ proyecto_sel.id }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Limpiar fecha
+                </a>
+            </div>
+            <div class="col-auto d-flex align-items-end">
+                <span class="badge bg-primary fs-6 px-3 py-2">
+                    {{ total_registros }} marca{{ total_registros|pluralize }}
                 </span>
             </div>
             {% endif %}
@@ -140,72 +148,130 @@
     <div class="alert-aws">
         <i class="fas fa-exclamation-triangle me-2 text-warning"></i>
         <strong>No se pudo conectar con AWS:</strong> {{ error_aws }}
-        — Verifica que <code>AWS_API_BASE_URL</code> esté configurado en el servidor.
     </div>
     {% endif %}
 
     {% if not proyecto_sel %}
     <div class="empty-state">
         <i class="fas fa-map-marker-alt text-primary"></i>
-        <p class="fw-semibold fs-5">Selecciona un proyecto para ver sus asistencias</p>
-        <p class="text-muted">Los registros se obtienen en tiempo real desde AWS.</p>
+        <p class="fw-semibold fs-5">Selecciona un proyecto para ver las asistencias</p>
+        <p class="text-muted">Los datos se obtienen en tiempo real desde AWS.</p>
     </div>
 
-    {% elif asistencias_aws %}
-    <div class="table-card">
-        <table class="table table-hover mb-0">
-            <thead>
-                <tr>
-                    <th>Trabajador</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
-                    <th>Tipo</th>
-                    <th>Similitud</th>
-                    <th>Ubicación</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for a in asistencias_aws %}
-                <tr>
-                    <td>
-                        <div class="fw-semibold">{{ a.userName|default:a.userId }}</div>
-                        <small class="text-muted">ID: {{ a.userId|slice:":8" }}…</small>
-                    </td>
-                    <td>{{ a.fecha_str }}</td>
-                    <td>{{ a.hora_str }}</td>
-                    <td>
-                        <span class="badge-tipo badge-{{ a.type }}">{{ a.tipo_display }}</span>
-                    </td>
-                    <td>
-                        {% if a.similarity %}
-                        <div class="d-flex align-items-center gap-2">
-                            <div class="progress flex-grow-1" style="height:6px; min-width:60px;">
-                                <div class="progress-bar bg-success" style="width:{{ a.similarity|floatformat:0 }}%"></div>
-                            </div>
-                            <small>{{ a.similitud_pct }}</small>
-                        </div>
-                        {% else %}—{% endif %}
-                    </td>
-                    <td>
-                        {% if a.lat and a.lng %}
-                        <a href="https://maps.google.com/?q={{ a.lat }},{{ a.lng }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0 px-2">
-                            <i class="fas fa-map-pin me-1"></i>Ver
-                        </a>
-                        {% else %}
-                        <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+    {% elif timeline_data %}
+    <!-- Leyenda -->
+    <div class="d-flex gap-3 mb-3 flex-wrap">
+        <small class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;border-radius:50%;background:#16a34a;display:inline-block"></span> Entrada
+        </small>
+        <small class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;border-radius:50%;background:#d97706;display:inline-block"></span> Salida almuerzo
+        </small>
+        <small class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;border-radius:50%;background:#2563eb;display:inline-block"></span> Retorno almuerzo
+        </small>
+        <small class="d-flex align-items-center gap-1">
+            <span style="width:10px;height:10px;border-radius:50%;background:#dc2626;display:inline-block"></span> Salida
+        </small>
     </div>
+
+    {% for item in timeline_data %}
+    <div class="timeline-card">
+        <div class="timeline-header">
+            <div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
+                <div class="worker-avatar">{{ item.nombre|first|upper }}</div>
+                <div class="worker-info">
+                    <div class="worker-name">{{ item.nombre }}</div>
+                    <div class="worker-date">
+                        <i class="fas fa-calendar-day me-1"></i>{{ item.fecha }}
+                    </div>
+                </div>
+            </div>
+            <!-- Badge de estado/horas -->
+            {% if item.horas_laboradas %}
+            <span class="horas-badge">
+                <i class="fas fa-clock"></i> {{ item.horas_laboradas }}
+            </span>
+            {% elif item.estado == 'en_trabajo' %}
+            <span class="horas-badge en-trabajo">
+                <i class="fas fa-briefcase"></i> En trabajo
+            </span>
+            {% elif item.estado == 'en_almuerzo' %}
+            <span class="horas-badge en-almuerzo">
+                <i class="fas fa-utensils"></i> En almuerzo
+            </span>
+            {% else %}
+            <span class="horas-badge sin-datos">
+                <i class="fas fa-minus"></i> Sin datos completos
+            </span>
+            {% endif %}
+        </div>
+
+        <!-- Marcas de tiempo -->
+        <div class="marks-row">
+            {% with entry=item.marcas.entry lunch_out=item.marcas.lunch_out lunch_in=item.marcas.lunch_in exit=item.marcas.exit %}
+
+            <!-- ENTRADA -->
+            <div class="mark-item {% if entry %}mark-entry{% else %}mark-empty{% endif %}">
+                <div class="mark-icon"><i class="fas fa-sign-in-alt"></i></div>
+                <div class="mark-hora">{% if entry %}{{ entry.hora }}{% else %}--:--{% endif %}</div>
+                <div class="mark-label">Entrada</div>
+                {% if entry and entry.lat %}
+                <a href="https://maps.google.com/?q={{ entry.lat }},{{ entry.lng }}" target="_blank"
+                   class="mark-location text-primary"><i class="fas fa-map-pin"></i></a>
+                {% endif %}
+            </div>
+
+            <div class="mark-arrow"><i class="fas fa-chevron-right"></i></div>
+
+            <!-- SALIDA ALMUERZO -->
+            <div class="mark-item {% if lunch_out %}mark-lunch_out{% else %}mark-empty{% endif %}">
+                <div class="mark-icon"><i class="fas fa-utensils"></i></div>
+                <div class="mark-hora">{% if lunch_out %}{{ lunch_out.hora }}{% else %}--:--{% endif %}</div>
+                <div class="mark-label">Sal. Almuerzo</div>
+                {% if lunch_out and lunch_out.lat %}
+                <a href="https://maps.google.com/?q={{ lunch_out.lat }},{{ lunch_out.lng }}" target="_blank"
+                   class="mark-location text-primary"><i class="fas fa-map-pin"></i></a>
+                {% endif %}
+            </div>
+
+            <div class="mark-arrow"><i class="fas fa-chevron-right"></i></div>
+
+            <!-- RETORNO ALMUERZO -->
+            <div class="mark-item {% if lunch_in %}mark-lunch_in{% else %}mark-empty{% endif %}">
+                <div class="mark-icon"><i class="fas fa-undo"></i></div>
+                <div class="mark-hora">{% if lunch_in %}{{ lunch_in.hora }}{% else %}--:--{% endif %}</div>
+                <div class="mark-label">Ret. Almuerzo</div>
+                {% if lunch_in and lunch_in.lat %}
+                <a href="https://maps.google.com/?q={{ lunch_in.lat }},{{ lunch_in.lng }}" target="_blank"
+                   class="mark-location text-primary"><i class="fas fa-map-pin"></i></a>
+                {% endif %}
+            </div>
+
+            <div class="mark-arrow"><i class="fas fa-chevron-right"></i></div>
+
+            <!-- SALIDA -->
+            <div class="mark-item {% if exit %}mark-exit{% else %}mark-empty{% endif %}">
+                <div class="mark-icon"><i class="fas fa-sign-out-alt"></i></div>
+                <div class="mark-hora">{% if exit %}{{ exit.hora }}{% else %}--:--{% endif %}</div>
+                <div class="mark-label">Salida</div>
+                {% if exit and exit.lat %}
+                <a href="https://maps.google.com/?q={{ exit.lat }},{{ exit.lng }}" target="_blank"
+                   class="mark-location text-primary"><i class="fas fa-map-pin"></i></a>
+                {% endif %}
+            </div>
+
+            {% endwith %}
+        </div><!-- /marks-row -->
+    </div><!-- /timeline-card -->
+    {% endfor %}
 
     {% else %}
     <div class="empty-state">
         <i class="fas fa-inbox"></i>
-        <p class="fw-semibold">Sin registros de asistencia para <strong>{{ proyecto_sel.nombre }}</strong></p>
-        <p class="text-muted">Aún no se han registrado asistencias desde la app móvil para este proyecto.</p>
+        <p class="fw-semibold">Sin registros para <strong>{{ proyecto_sel.nombre }}</strong>
+        {% if fecha_filtro %}el {{ fecha_filtro }}{% endif %}</p>
+        <p class="text-muted">Aún no hay marcas de asistencia desde la app móvil.</p>
     </div>
     {% endif %}
 

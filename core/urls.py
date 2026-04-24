@@ -292,4 +292,9 @@ urlpatterns = [
     path('asistencias/moviles/', views.asistencias_moviles_dashboard, name='asistencias_moviles_dashboard'),
     path('proyectos/<int:proyecto_id>/geocerca/guardar/', views.geocerca_proyecto_guardar, name='geocerca_proyecto_guardar'),
     path('api/aws/webhook/registro-usuario/', views.aws_webhook_registro_usuario, name='aws_webhook_registro_usuario'),
+
+    # ==================== MÓDULO GEOCERCAS ====================
+    path('geocercas/', views.geocercas_list, name='geocercas_list'),
+    path('geocercas/<int:proyecto_id>/configurar/', views.geocerca_configurar, name='geocerca_configurar'),
+    path('geocercas/<int:proyecto_id>/eliminar/', views.geocerca_eliminar, name='geocerca_eliminar'),
 ]

@@ -9143,20 +9143,88 @@ def asistencia_delete(request, asistencia_id):
 
 @login_required
 def asistencias_moviles_dashboard(request):
-    """Dashboard de asistencias registradas desde la app móvil (AWS)."""
+    """Dashboard de asistencias con timeline por trabajador/día desde AWS."""
     from core.models import Proyecto
     from core import aws_service
+    from collections import defaultdict
+    from datetime import datetime, timezone as dt_tz
 
     proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
     proyecto_id = request.GET.get('proyecto')
+    fecha_filtro = request.GET.get('fecha', '')
     proyecto_sel = None
-    asistencias_aws = []
     error_aws = None
+    timeline_data = []
+    total_registros = 0
+
+    ORDEN_TIPO = {'entry': 0, 'lunch_out': 1, 'lunch_in': 2, 'exit': 3}
+    TIPOS_LABEL = {
+        'entry': ('Entrada', 'success'),
+        'exit': ('Salida', 'danger'),
+        'lunch_out': ('Salida Almuerzo', 'warning'),
+        'lunch_in': ('Retorno Almuerzo', 'info'),
+    }
 
     if proyecto_id:
         try:
             proyecto_sel = Proyecto.objects.get(id=proyecto_id, activo=True)
-            asistencias_aws = aws_service.obtener_asistencias_proyecto(proyecto_id)
+            registros = aws_service.obtener_asistencias_proyecto(proyecto_id)
+            total_registros = len(registros)
+
+            # Agrupar por (fecha, userId)
+            grupos = defaultdict(lambda: {'nombre': '', 'marcas': {}})
+            for r in registros:
+                ts = r.get('timestamp', 0)
+                dt = datetime.fromtimestamp(ts / 1000)
+                fecha_str = dt.strftime('%Y-%m-%d')
+
+                if fecha_filtro and fecha_str != fecha_filtro:
+                    continue
+
+                uid = r.get('userId', '')
+                key = (fecha_str, uid)
+                grupos[key]['nombre'] = r.get('userName') or uid
+                grupos[key]['userId'] = uid
+                tipo = r.get('type', '')
+                grupos[key]['marcas'][tipo] = {
+                    'hora': dt.strftime('%H:%M'),
+                    'lat': r.get('lat'),
+                    'lng': r.get('lng'),
+                    'similitud': r.get('similarity', 0),
+                }
+
+            # Calcular horas laboradas por grupo
+            for (fecha_str, uid), data in sorted(grupos.items(), reverse=True):
+                marcas = data['marcas']
+                horas_lab = None
+                estado = 'sin_datos'
+                try:
+                    if 'entry' in marcas and 'exit' in marcas:
+                        t_entry = datetime.strptime(f"{fecha_str} {marcas['entry']['hora']}", '%Y-%m-%d %H:%M')
+                        t_exit  = datetime.strptime(f"{fecha_str} {marcas['exit']['hora']}", '%Y-%m-%d %H:%M')
+                        total_min = (t_exit - t_entry).seconds // 60
+                        # Descontar almuerzo si hay ambas marcas
+                        if 'lunch_out' in marcas and 'lunch_in' in marcas:
+                            t_lo = datetime.strptime(f"{fecha_str} {marcas['lunch_out']['hora']}", '%Y-%m-%d %H:%M')
+                            t_li = datetime.strptime(f"{fecha_str} {marcas['lunch_in']['hora']}", '%Y-%m-%d %H:%M')
+                            total_min -= max(0, (t_li - t_lo).seconds // 60)
+                        horas_lab = f"{total_min // 60}h {total_min % 60:02d}m"
+                        estado = 'completo'
+                    elif 'entry' in marcas:
+                        estado = 'en_trabajo' if 'lunch_out' not in marcas else 'en_almuerzo'
+                except Exception:
+                    pass
+
+                timeline_data.append({
+                    'fecha': fecha_str,
+                    'nombre': data['nombre'],
+                    'userId': uid,
+                    'marcas': marcas,
+                    'horas_laboradas': horas_lab,
+                    'estado': estado,
+                    'tipos_label': TIPOS_LABEL,
+                })
+
         except Proyecto.DoesNotExist:
             pass
         except Exception as e:
@@ -9165,20 +9233,98 @@ def asistencias_moviles_dashboard(request):
     context = {
         'proyectos': proyectos,
         'proyecto_sel': proyecto_sel,
-        'asistencias_aws': asistencias_aws,
+        'timeline_data': timeline_data,
         'error_aws': error_aws,
-        'total_registros': len(asistencias_aws),
+        'total_registros': total_registros,
+        'fecha_filtro': fecha_filtro,
     }
     return render(request, 'core/asistencias/moviles_dashboard.html', context)
 
 
 @login_required
-def geocerca_proyecto_guardar(request, proyecto_id):
-    """Guarda la geocerca de un proyecto en AWS desde el sistema admin."""
-    from core.models import Proyecto
+def geocercas_list(request):
+    """Lista todos los proyectos con estado de geocerca."""
+    from core.models import Proyecto, GeocercaProyecto
+
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre').prefetch_related('geocerca')
+    geocercas_ids = set(GeocercaProyecto.objects.filter(activa=True).values_list('proyecto_id', flat=True))
+
+    proyectos_data = []
+    for p in proyectos:
+        geocerca = None
+        try:
+            geocerca = p.geocerca if p.geocerca.activa else None
+        except Exception:
+            pass
+        proyectos_data.append({
+            'proyecto': p,
+            'geocerca': geocerca,
+            'tiene_geocerca': p.id in geocercas_ids,
+        })
+
+    context = {
+        'proyectos_data': proyectos_data,
+        'total_con_geocerca': len(geocercas_ids),
+        'total_sin_geocerca': len(proyectos_data) - len(geocercas_ids),
+    }
+    return render(request, 'core/geocercas/list.html', context)
+
+
+@login_required
+def geocerca_configurar(request, proyecto_id):
+    """Vista principal de configuración de geocerca para un proyecto — mapa Leaflet."""
+    from core.models import Proyecto, GeocercaProyecto
     from core import aws_service
 
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id, activo=True)
+    geocerca_actual = aws_service.obtener_geocerca_proyecto(proyecto_id)
+
+    # Serializar para pasar al JS del template de forma segura
+    geocerca_json = None
+    if geocerca_actual:
+        import json as json_mod
+        from datetime import datetime
+        cfg = geocerca_actual.copy()
+        # Convertir datetime a string para JSON
+        if 'actualizado_en' in cfg and hasattr(cfg['actualizado_en'], 'strftime'):
+            cfg['actualizado_en'] = cfg['actualizado_en'].strftime('%d/%m/%Y %H:%M')
+        geocerca_json = json_mod.dumps(cfg)
+
+    context = {
+        'proyecto': proyecto,
+        'geocerca_actual': geocerca_actual,
+        'geocerca_json': geocerca_json,
+    }
+    return render(request, 'core/geocercas/configurar.html', context)
+
+
+@login_required
+def geocerca_eliminar(request, proyecto_id):
+    """Elimina la geocerca de un proyecto."""
+    from core.models import GeocercaProyecto
+    from core import aws_service
+
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id, activo=True)
+
+    if request.method == 'POST':
+        # Desactivar en Django DB
+        GeocercaProyecto.objects.filter(proyecto=proyecto).update(activa=False)
+        # Notificar a AWS (radio 0 = sin restricción)
+        aws_service.eliminar_geocerca(proyecto_id)
+        messages.success(request, f'✅ Geocerca eliminada para "{proyecto.nombre}".')
+        logger.info(f'Geocerca eliminada para proyecto {proyecto_id} por {request.user}')
+    return redirect('geocercas_list')
+
+
+@login_required
+def geocerca_proyecto_guardar(request, proyecto_id):
+    """Guarda la geocerca en Django DB y la sincroniza con AWS."""
+    from core.models import Proyecto, GeocercaProyecto
+    from core import aws_service
+    import json as json_mod
+
     proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+    redirect_to = request.POST.get('redirect_to', 'geocercas_list')
 
     if request.method == 'POST':
         tipo = request.POST.get('tipo_geocerca')
@@ -9189,36 +9335,60 @@ def geocerca_proyecto_guardar(request, proyecto_id):
                 lng = float(request.POST.get('lng', '').replace(',', '.'))
                 radio = float(request.POST.get('radio_metros', '100').replace(',', '.'))
             except ValueError:
-                messages.error(request, '❌ Coordenadas inválidas. Verifica los valores ingresados.')
-                return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+                messages.error(request, '❌ Coordenadas inválidas.')
+                return redirect('geocerca_configurar', proyecto_id=proyecto_id)
 
+            config = {'lat': lat, 'lng': lng, 'radiusMeters': radio}
             result = aws_service.guardar_geocerca_circulo(proyecto_id, lat, lng, radio)
 
         elif tipo == 'poligono':
             coords_json = request.POST.get('coordenadas_json', '[]')
             try:
-                import json as json_mod
                 coordenadas = json_mod.loads(coords_json)
                 if len(coordenadas) < 3:
-                    messages.error(request, '❌ El polígono debe tener al menos 3 puntos.')
-                    return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+                    messages.error(request, '❌ El polígono necesita mínimo 3 puntos.')
+                    return redirect('geocerca_configurar', proyecto_id=proyecto_id)
             except Exception:
                 messages.error(request, '❌ Formato de coordenadas inválido.')
-                return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+                return redirect('geocerca_configurar', proyecto_id=proyecto_id)
 
+            config = {'coordinates': coordenadas}
             result = aws_service.guardar_geocerca_poligono(proyecto_id, coordenadas)
 
         else:
             messages.error(request, '❌ Tipo de geocerca no válido.')
-            return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+            return redirect('geocerca_configurar', proyecto_id=proyecto_id)
 
         if result['ok']:
-            messages.success(request, f'✅ Geocerca configurada correctamente para "{proyecto.nombre}".')
-            logger.info(f'Geocerca guardada para proyecto {proyecto_id} por usuario {request.user}')
+            # Guardar / actualizar en Django DB
+            GeocercaProyecto.objects.update_or_create(
+                proyecto=proyecto,
+                defaults={
+                    'tipo': 'circle' if tipo == 'circulo' else 'polygon',
+                    'configuracion': config,
+                    'activa': True,
+                    'actualizado_por': request.user,
+                },
+            )
+            messages.success(request, f'✅ Geocerca guardada para "{proyecto.nombre}".')
+            logger.info(f'Geocerca guardada proyecto={proyecto_id} tipo={tipo} usuario={request.user}')
         else:
-            messages.error(request, f'❌ Error al guardar geocerca en AWS: {result.get("error", "Error desconocido")}')
+            messages.error(request, f'❌ Error al guardar en AWS: {result.get("error", "Error desconocido")}. '
+                                     f'Los datos se guardaron localmente.')
+            # Guardar localmente de todas formas para no perder la config
+            GeocercaProyecto.objects.update_or_create(
+                proyecto=proyecto,
+                defaults={
+                    'tipo': 'circle' if tipo == 'circulo' else 'polygon',
+                    'configuracion': config,
+                    'activa': True,
+                    'actualizado_por': request.user,
+                },
+            )
 
-    return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+    if redirect_to == 'proyecto_dashboard':
+        return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+    return redirect('geocercas_list')
 
 
 @csrf_exempt
