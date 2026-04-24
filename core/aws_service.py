@@ -186,7 +186,10 @@ def _procesar_registros(registros: list) -> list:
                 r['fecha_str'] = '-'
                 r['hora_str'] = '-'
         r['tipo_display'] = TIPOS.get(r.get('type', ''), r.get('type', '-'))
-        r['similitud_pct'] = f"{r.get('similarity', 0):.1f}%" if r.get('similarity') else '-'
+        try:
+            r['similitud_pct'] = f"{float(r.get('similarity', 0)):.1f}%" if r.get('similarity') else '-'
+        except (ValueError, TypeError):
+            r['similitud_pct'] = '-'
         processed.append(r)
     return processed
 
