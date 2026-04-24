@@ -90,11 +90,14 @@ def obtener_geocerca_proyecto(project_id: int) -> dict | None:
         g = GeocercaProyecto.objects.select_related('proyecto').get(
             proyecto_id=project_id, activa=True
         )
+        lat, lng = g.centro
         return {
             'tipo': g.tipo,
             'configuracion': g.configuracion,
             'resumen': g.resumen,
-            'centro': g.centro,
+            'centro': [lat, lng],
+            'centro_lat': lat,
+            'centro_lng': lng,
             'actualizado_en': g.actualizado_en,
         }
     except Exception:

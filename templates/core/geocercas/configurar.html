@@ -12,51 +12,67 @@
     .page-header p  { margin: 0; opacity: .85; font-size: .95rem; }
 
     #map {
-        height: 480px; border-radius: 12px;
-        border: 2px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,.1);
+        height: 460px; border-radius: 12px;
+        border: 2px solid #e5e7eb; box-shadow: 0 2px 8px rgba(0,0,0,.12);
     }
 
     .config-card {
         background: white; border-radius: 12px; border: 1px solid #e5e7eb;
-        box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 1.25rem;
     }
 
-    .tabs-geo { display: flex; gap: .5rem; margin-bottom: 1.5rem; }
+    /* Buscador */
+    .search-box {
+        background: white; border-radius: 12px; border: 1px solid #e5e7eb;
+        box-shadow: 0 1px 3px rgba(0,0,0,.06); padding: 1rem 1.25rem; margin-bottom: 1rem;
+    }
+    .search-box label { font-weight: 600; font-size: .875rem; margin-bottom: .4rem; display: block; }
+    .search-input-group { display: flex; gap: .5rem; }
+    .search-input-group input { flex: 1; }
+
+    /* Geocerca actual */
+    .geocerca-info {
+        background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
+        padding: 1rem 1.25rem; margin-bottom: 1rem;
+    }
+    .geocerca-info .title { font-weight: 700; color: #166534; font-size: .9rem; margin-bottom: .5rem; }
+    .geocerca-info .detail { font-size: .85rem; color: #374151; }
+
+    /* Tabs */
+    .tabs-geo { display: flex; gap: .5rem; margin-bottom: 1.25rem; }
     .tab-btn {
-        flex: 1; padding: .65rem 1rem; border: 2px solid #e5e7eb; background: #f8fafc;
-        border-radius: 10px; font-weight: 600; font-size: .9rem; cursor: pointer;
+        flex: 1; padding: .6rem; border: 2px solid #e5e7eb; background: #f8fafc;
+        border-radius: 10px; font-weight: 600; font-size: .85rem; cursor: pointer;
         transition: all .15s; color: #6b7280;
     }
     .tab-btn.active { border-color: #2563eb; background: #eff6ff; color: #2563eb; }
     .tab-btn:hover:not(.active) { border-color: #93c5fd; }
-
     .tab-content { display: none; }
     .tab-content.active { display: block; }
 
     .map-tip {
         background: #eff6ff; border-left: 3px solid #2563eb;
-        border-radius: 0 8px 8px 0; padding: .75rem 1rem;
-        font-size: .85rem; color: #1e40af; margin-bottom: 1rem;
+        border-radius: 0 8px 8px 0; padding: .6rem .9rem;
+        font-size: .82rem; color: #1e40af; margin-bottom: .9rem;
     }
 
     .coords-display {
         background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px;
-        padding: .75rem 1rem; font-family: monospace; font-size: .85rem;
-        color: #374151; min-height: 2.5rem;
-    }
-
-    .geocerca-actual {
-        background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px;
-        padding: 1rem; margin-bottom: 1rem;
+        padding: .65rem .9rem; font-family: monospace; font-size: .82rem;
+        color: #374151; min-height: 2.5rem; white-space: pre;
     }
 
     .radio-slider { width: 100%; accent-color: #2563eb; }
 
-    .circle-preview {
-        display: inline-block; width: 14px; height: 14px;
-        background: rgba(37,99,235,.2); border: 2px solid #2563eb;
-        border-radius: 50%; vertical-align: middle; margin-right: .4rem;
+    /* Google Maps link */
+    .gmaps-link {
+        display: inline-flex; align-items: center; gap: .4rem;
+        background: #fff7ed; border: 1px solid #fdba74; color: #c2410c;
+        border-radius: 8px; padding: .4rem .85rem; font-size: .82rem;
+        font-weight: 600; text-decoration: none; transition: background .15s;
     }
+    .gmaps-link:hover { background: #ffedd5; color: #9a3412; }
+    .gmaps-link img { width: 16px; height: 16px; }
 </style>
 {% endblock %}
 
@@ -68,38 +84,85 @@
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
             <div>
                 <h1><i class="fas fa-map-marker-alt me-2"></i>Geocerca — {{ proyecto.nombre }}</h1>
-                <p>Define la zona donde los trabajadores pueden registrar asistencia. ID proyecto: <strong>{{ proyecto.id }}</strong></p>
+                <p>Define la zona donde los trabajadores pueden registrar asistencia desde la app.
+                   ID del proyecto: <strong>{{ proyecto.id }}</strong></p>
             </div>
             <a href="{% url 'geocercas_list' %}" class="btn btn-light btn-sm">
-                <i class="fas fa-arrow-left me-1"></i>Volver a geocercas
+                <i class="fas fa-arrow-left me-1"></i>Volver
             </a>
         </div>
     </div>
 
     <div class="row g-3">
 
-        <!-- Mapa -->
-        <div class="col-lg-7">
+        <!-- ======= COLUMNA MAPA ======= -->
+        <div class="col-lg-7 d-flex flex-column gap-2">
+
+            <!-- Buscador de dirección -->
+            <div class="search-box">
+                <label><i class="fas fa-search me-1 text-primary"></i>Buscar dirección en el mapa</label>
+                <div class="search-input-group">
+                    <input type="text" id="search-input" class="form-control form-control-sm"
+                           placeholder="Ej: Los Amates, Izabal, Guatemala"
+                           value="Los Amates, Izabal, Guatemala">
+                    <button type="button" class="btn btn-primary btn-sm px-3" onclick="buscarDireccion()">
+                        <i class="fas fa-search me-1"></i>Buscar
+                    </button>
+                </div>
+                <small class="text-muted mt-1 d-block">
+                    Usa el buscador para centrar el mapa en la ubicación. Luego haz clic para colocar la geocerca.
+                </small>
+            </div>
+
+            <!-- Mapa -->
             <div id="map"></div>
-            <small class="text-muted mt-2 d-block">
-                <i class="fas fa-info-circle me-1 text-primary"></i>
-                <strong>Círculo:</strong> clic para fijar el centro &nbsp;|&nbsp;
-                <strong>Polígono:</strong> clic para agregar puntos, doble clic para cerrar
-            </small>
+
+            <!-- Instrucciones bajo el mapa -->
+            <div class="d-flex gap-3 flex-wrap">
+                <small class="text-muted">
+                    <i class="fas fa-circle me-1 text-primary"></i>
+                    <strong>Círculo:</strong> clic para fijar centro, arrastra el pin para mover
+                </small>
+                <small class="text-muted">
+                    <i class="fas fa-draw-polygon me-1 text-purple" style="color:#7c3aed"></i>
+                    <strong>Polígono:</strong> clic para puntos, doble clic para cerrar
+                </small>
+            </div>
         </div>
 
-        <!-- Panel de configuración -->
-        <div class="col-lg-5">
+        <!-- ======= COLUMNA PANEL ======= -->
+        <div class="col-lg-5 d-flex flex-column gap-3">
 
+            <!-- Geocerca guardada actualmente -->
             {% if geocerca_actual %}
-            <div class="geocerca-actual mb-3">
-                <strong><i class="fas fa-check-circle text-success me-1"></i>Geocerca actual:</strong>
-                {{ geocerca_actual.resumen }}
+            <div class="geocerca-info">
+                <div class="title"><i class="fas fa-check-circle me-1"></i>Geocerca activa</div>
+                <div class="detail mb-2">
+                    <strong>Tipo:</strong> {{ geocerca_actual.tipo|capfirst }} &nbsp;·&nbsp;
+                    <strong>{{ geocerca_actual.resumen }}</strong>
+                </div>
+                <div class="detail mb-2">
+                    <strong>Actualizada:</strong>
+                    {% if geocerca_actual.actualizado_en %}{{ geocerca_actual.actualizado_en }}{% endif %}
+                </div>
+                <!-- Enlace a Google Maps -->
+                <a href="https://www.google.com/maps?q={{ geocerca_actual.centro_lat }},{{ geocerca_actual.centro_lng }}&z=17"
+                   target="_blank" class="gmaps-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ea4335">
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+                    </svg>
+                    Ver geocerca en Google Maps
+                </a>
+            </div>
+            {% else %}
+            <div class="alert alert-info py-2 px-3 mb-0" style="border-radius:10px; font-size:.875rem;">
+                <i class="fas fa-info-circle me-1"></i>
+                Este proyecto aún no tiene geocerca configurada. Usa el mapa para crear una.
             </div>
             {% endif %}
 
+            <!-- Configuración -->
             <div class="config-card">
-                <!-- Tabs tipo -->
                 <div class="tabs-geo">
                     <button class="tab-btn active" onclick="switchTab('circulo', this)">
                         <i class="fas fa-circle me-1"></i>Círculo
@@ -113,7 +176,7 @@
                 <div id="tab-circulo" class="tab-content active">
                     <div class="map-tip">
                         <i class="fas fa-mouse-pointer me-1"></i>
-                        Haz clic en el mapa para fijar el <strong>centro</strong>. Ajusta el radio con el deslizador.
+                        Haz clic en el mapa para fijar el <strong>centro</strong>. Arrastra el pin para ajustar.
                     </div>
                     <form method="post" action="{% url 'geocerca_proyecto_guardar' proyecto.id %}" id="form-circulo">
                         {% csrf_token %}
@@ -121,20 +184,34 @@
                         <input type="hidden" name="redirect_to" value="geocercas_list">
                         <div class="row g-2 mb-3">
                             <div class="col-6">
-                                <label class="form-label fw-semibold mb-1">Latitud</label>
-                                <input type="text" name="lat" id="c-lat" class="form-control" placeholder="15.6356" required>
+                                <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Latitud</label>
+                                <input type="text" name="lat" id="c-lat" class="form-control form-control-sm"
+                                       placeholder="15.2672" required>
                             </div>
                             <div class="col-6">
-                                <label class="form-label fw-semibold mb-1">Longitud</label>
-                                <input type="text" name="lng" id="c-lng" class="form-control" placeholder="-90.5069" required>
+                                <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Longitud</label>
+                                <input type="text" name="lng" id="c-lng" class="form-control form-control-sm"
+                                       placeholder="-89.0969" required>
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label fw-semibold mb-1">
+                            <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">
                                 Radio: <span id="radio-label">100</span> metros
                             </label>
                             <input type="range" name="radio_metros" id="radio-slider" class="radio-slider"
                                    min="20" max="2000" step="10" value="100">
+                            <div class="d-flex justify-content-between" style="font-size:.75rem;color:#9ca3af;">
+                                <span>20 m</span><span>500 m</span><span>1 km</span><span>2 km</span>
+                            </div>
+                        </div>
+                        <!-- Enlace dinámico a Google Maps -->
+                        <div class="mb-3">
+                            <a id="gmaps-link-circle" href="#" target="_blank" class="gmaps-link">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="#ea4335">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5s2.5 1.12 2.5 2.5S13.38 11.5 12 11.5z"/>
+                                </svg>
+                                Verificar ubicación en Google Maps
+                            </a>
                         </div>
                         <button type="submit" class="btn btn-primary w-100">
                             <i class="fas fa-save me-1"></i>Guardar geocerca circular
@@ -146,7 +223,7 @@
                 <div id="tab-poligono" class="tab-content">
                     <div class="map-tip">
                         <i class="fas fa-mouse-pointer me-1"></i>
-                        Haz clic en el mapa para agregar puntos del polígono. <strong>Doble clic</strong> para cerrar y guardar.
+                        Haz clic para agregar puntos. <strong>Doble clic</strong> para cerrar el polígono.
                     </div>
                     <form method="post" action="{% url 'geocerca_proyecto_guardar' proyecto.id %}" id="form-poligono">
                         {% csrf_token %}
@@ -154,22 +231,24 @@
                         <input type="hidden" name="redirect_to" value="geocercas_list">
                         <input type="hidden" name="coordenadas_json" id="poligono-json">
                         <div class="mb-3">
-                            <label class="form-label fw-semibold mb-1">Puntos del polígono</label>
-                            <div class="coords-display" id="puntos-display">Sin puntos aún</div>
+                            <label class="form-label fw-semibold mb-1" style="font-size:.82rem;">Puntos del polígono</label>
+                            <div class="coords-display" id="puntos-display">Sin puntos aún — haz clic en el mapa</div>
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary flex-grow-1" onclick="limpiarPoligono()">
+                            <button type="button" class="btn btn-outline-secondary btn-sm flex-grow-1"
+                                    onclick="limpiarPoligono()">
                                 <i class="fas fa-trash me-1"></i>Limpiar
                             </button>
-                            <button type="submit" class="btn btn-primary flex-grow-1" id="btn-guardar-poligono" disabled>
-                                <i class="fas fa-save me-1"></i>Guardar polígono
+                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1"
+                                    id="btn-guardar-poligono" disabled>
+                                <i class="fas fa-save me-1"></i>Guardar
                             </button>
                         </div>
                     </form>
                 </div>
 
             </div><!-- /config-card -->
-        </div><!-- /col -->
+        </div><!-- /col panel -->
     </div><!-- /row -->
 
 </div>
@@ -179,31 +258,38 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 // ===================== CONFIGURACIÓN INICIAL =====================
-const PROYECTO_ID = {{ proyecto.id }};
 {% if geocerca_json %}
 const GEOCERCA_ACTUAL = {{ geocerca_json|safe }};
 {% else %}
 const GEOCERCA_ACTUAL = null;
 {% endif %}
 
-// Centro por defecto: Guatemala
-let defaultLat = 15.6356, defaultLng = -90.5069, defaultZoom = 13;
+// Los Amates, Izabal, Guatemala como centro por defecto
+let defaultLat = 15.2672, defaultLng = -89.0969, defaultZoom = 14;
 
 if (GEOCERCA_ACTUAL) {
     const c = GEOCERCA_ACTUAL.centro;
-    defaultLat = c[0]; defaultLng = c[1]; defaultZoom = 15;
+    defaultLat = c[0]; defaultLng = c[1]; defaultZoom = 16;
 }
 
 // ===================== MAPA =====================
 const map = L.map('map').setView([defaultLat, defaultLng], defaultZoom);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
+    attribution: '© <a href="https://openstreetmap.org">OpenStreetMap</a>',
     maxZoom: 19
 }).addTo(map);
 
+// Marcador de referencia Los Amates
+L.marker([15.2672, -89.0969], {
+    icon: L.divIcon({
+        html: '<div style="background:#2563eb;color:white;padding:2px 7px;border-radius:6px;font-size:11px;white-space:nowrap;font-weight:600;">Los Amates</div>',
+        className: '', iconAnchor: [40, 10]
+    })
+}).addTo(map).bindTooltip('Los Amates, Izabal — Ubicación de referencia');
+
 // ===================== ESTADO =====================
-let modoActivo = 'circulo';  // 'circulo' | 'poligono'
+let modoActivo = 'circulo';
 let circleMarker = null, circleShape = null;
 let polyMarkers = [], polyLayer = null, polyPoints = [];
 
@@ -214,14 +300,16 @@ function mostrarGeocercaActual() {
     const cfg  = GEOCERCA_ACTUAL.configuracion;
 
     if (tipo === 'circle') {
-        const lat = cfg.lat, lng = cfg.lng, r = cfg.radiusMeters;
-        L.circle([lat, lng], { radius: r, color: '#22c55e', fillOpacity: 0.12, dashArray: '6' }).addTo(map)
-         .bindTooltip('Geocerca actual', { permanent: false });
-        L.marker([lat, lng]).addTo(map).bindTooltip('Centro actual');
+        const lat = parseFloat(cfg.lat), lng = parseFloat(cfg.lng), r = parseFloat(cfg.radiusMeters);
+        L.circle([lat, lng], {
+            radius: r, color: '#22c55e', weight: 2, fillOpacity: 0.15, dashArray: '8 4'
+        }).addTo(map).bindTooltip(`Geocerca activa · radio ${r.toFixed(0)} m`, { permanent: true, direction: 'top' });
+        L.marker([lat, lng]).addTo(map).bindTooltip('Centro geocerca');
     } else if (tipo === 'polygon') {
         const coords = cfg.coordinates.map(p => [parseFloat(p[0]), parseFloat(p[1])]);
-        L.polygon(coords, { color: '#22c55e', fillOpacity: 0.12, dashArray: '6' }).addTo(map)
-         .bindTooltip('Geocerca actual');
+        L.polygon(coords, {
+            color: '#22c55e', weight: 2, fillOpacity: 0.15, dashArray: '8 4'
+        }).addTo(map).bindTooltip('Geocerca activa', { permanent: true, direction: 'top' });
     }
 }
 mostrarGeocercaActual();
@@ -243,11 +331,26 @@ const radioSlider = document.getElementById('radio-slider');
 const radioLabel  = document.getElementById('radio-label');
 const cLat = document.getElementById('c-lat');
 const cLng = document.getElementById('c-lng');
+const gmapsLinkCircle = document.getElementById('gmaps-link-circle');
+
+function actualizarGmapsLink() {
+    const lat = cLat.value, lng = cLng.value;
+    if (lat && lng) {
+        gmapsLinkCircle.href = `https://www.google.com/maps?q=${lat},${lng}&z=17`;
+        gmapsLinkCircle.style.opacity = '1';
+    } else {
+        gmapsLinkCircle.href = '#';
+        gmapsLinkCircle.style.opacity = '0.5';
+    }
+}
 
 radioSlider.addEventListener('input', () => {
     radioLabel.textContent = radioSlider.value;
     redrawCircle();
 });
+
+cLat.addEventListener('change', () => { redrawCircle(); actualizarGmapsLink(); });
+cLng.addEventListener('change', () => { redrawCircle(); actualizarGmapsLink(); });
 
 function redrawCircle() {
     const lat = parseFloat(cLat.value), lng = parseFloat(cLng.value), r = parseInt(radioSlider.value);
@@ -255,13 +358,17 @@ function redrawCircle() {
     if (circleMarker) map.removeLayer(circleMarker);
     if (circleShape)  map.removeLayer(circleShape);
     circleMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
-    circleShape  = L.circle([lat, lng], { radius: r, color: '#2563eb', fillOpacity: 0.15 }).addTo(map);
+    circleShape  = L.circle([lat, lng], {
+        radius: r, color: '#2563eb', weight: 2, fillOpacity: 0.18
+    }).addTo(map);
     circleMarker.on('drag', e => {
         const p = e.target.getLatLng();
         cLat.value = p.lat.toFixed(6);
         cLng.value = p.lng.toFixed(6);
         circleShape.setLatLng(p);
+        actualizarGmapsLink();
     });
+    actualizarGmapsLink();
 }
 
 // ===================== POLÍGONO =====================
@@ -270,7 +377,7 @@ function limpiarPoligono() {
     polyMarkers.forEach(m => map.removeLayer(m));
     polyMarkers = [];
     if (polyLayer) { map.removeLayer(polyLayer); polyLayer = null; }
-    document.getElementById('puntos-display').textContent = 'Sin puntos aún';
+    document.getElementById('puntos-display').textContent = 'Sin puntos aún — haz clic en el mapa';
     document.getElementById('btn-guardar-poligono').disabled = true;
     document.getElementById('poligono-json').value = '';
 }
@@ -280,41 +387,82 @@ function actualizarPoligono() {
     document.getElementById('puntos-display').textContent = display || 'Sin puntos aún';
     document.getElementById('btn-guardar-poligono').disabled = polyPoints.length < 3;
     document.getElementById('poligono-json').value = JSON.stringify(polyPoints);
-
     if (polyLayer) map.removeLayer(polyLayer);
     if (polyPoints.length >= 2) {
-        polyLayer = L.polygon(polyPoints, { color: '#7c3aed', fillOpacity: 0.15 }).addTo(map);
+        polyLayer = L.polygon(polyPoints, { color: '#7c3aed', weight: 2, fillOpacity: 0.15 }).addTo(map);
     }
 }
 
-// ===================== CLICK EN MAPA =====================
+// ===================== CLIC EN MAPA =====================
 map.on('click', e => {
     const { lat, lng } = e.latlng;
     if (modoActivo === 'circulo') {
         cLat.value = lat.toFixed(6);
         cLng.value = lng.toFixed(6);
         redrawCircle();
-        map.setView([lat, lng], map.getZoom());
     } else if (modoActivo === 'poligono') {
         polyPoints.push([lat, lng]);
-        const m = L.circleMarker([lat, lng], { radius: 6, color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 1 }).addTo(map);
-        m.bindTooltip(`P${polyPoints.length}`);
+        const m = L.circleMarker([lat, lng], {
+            radius: 6, color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 1
+        }).addTo(map).bindTooltip(`P${polyPoints.length}`);
         polyMarkers.push(m);
         actualizarPoligono();
     }
 });
 
-// Doble clic en polígono = cerrar y preparar guardado
+// Doble clic = cerrar polígono
 map.on('dblclick', e => {
     if (modoActivo === 'poligono' && polyPoints.length >= 3) {
         L.DomEvent.stop(e);
-        document.getElementById('btn-guardar-poligono').disabled = false;
-        document.getElementById('btn-guardar-poligono').textContent = '✅ Listo — clic para guardar';
-        document.getElementById('btn-guardar-poligono').disabled = false;
+        const btn = document.getElementById('btn-guardar-poligono');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save me-1"></i>Guardar polígono';
     }
 });
 
-// Pre-cargar geocerca actual en campos si es círculo
+// ===================== BUSCADOR DE DIRECCIÓN (Nominatim) =====================
+async function buscarDireccion() {
+    const query = document.getElementById('search-input').value.trim();
+    if (!query) return;
+
+    const btn = document.querySelector('[onclick="buscarDireccion()"]');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Buscando...';
+
+    try {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=1&countrycodes=gt`;
+        const res = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+        const data = await res.json();
+
+        if (data.length > 0) {
+            const lat = parseFloat(data[0].lat);
+            const lng = parseFloat(data[0].lon);
+            map.setView([lat, lng], 16);
+
+            // Marcador temporal de búsqueda
+            L.popup()
+             .setLatLng([lat, lng])
+             .setContent(`<strong>${data[0].display_name.split(',').slice(0,2).join(',')}</strong><br>
+                          <small>${lat.toFixed(5)}, ${lng.toFixed(5)}</small><br>
+                          <small class="text-muted">Haz clic en el mapa para colocar la geocerca</small>`)
+             .openOn(map);
+        } else {
+            alert('No se encontró la dirección. Intenta ser más específico.');
+        }
+    } catch(err) {
+        alert('Error al buscar dirección. Verifica tu conexión.');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-search me-1"></i>Buscar';
+    }
+}
+
+// Buscar al presionar Enter
+document.getElementById('search-input').addEventListener('keypress', e => {
+    if (e.key === 'Enter') { e.preventDefault(); buscarDireccion(); }
+});
+
+// ===================== PRE-CARGAR GEOCERCA ACTUAL =====================
 if (GEOCERCA_ACTUAL && GEOCERCA_ACTUAL.tipo === 'circle') {
     const cfg = GEOCERCA_ACTUAL.configuracion;
     cLat.value = cfg.lat;
@@ -322,6 +470,8 @@ if (GEOCERCA_ACTUAL && GEOCERCA_ACTUAL.tipo === 'circle') {
     radioSlider.value = cfg.radiusMeters;
     radioLabel.textContent = cfg.radiusMeters;
     redrawCircle();
+} else {
+    actualizarGmapsLink();
 }
 </script>
 {% endblock %}
