@@ -118,6 +118,45 @@ def obtener_asistencias_proyecto(project_id: int) -> list:
     return []
 
 
+def obtener_todas_asistencias_dynamo() -> list:
+    """Escanea directamente DynamoDB para obtener TODOS los registros de asistencia
+    sin filtrar por proyecto. Útil para el dashboard global."""
+    try:
+        import boto3
+        from django.conf import settings as dj_settings
+        client = boto3.client(
+            'dynamodb',
+            region_name=getattr(dj_settings, 'AWS_DEFAULT_REGION', 'us-east-2'),
+            aws_access_key_id=getattr(dj_settings, 'AWS_ACCESS_KEY_ID', None),
+            aws_secret_access_key=getattr(dj_settings, 'AWS_SECRET_ACCESS_KEY', None),
+        )
+        items = []
+        kwargs = {'TableName': 'AsistenciaRecords'}
+        while True:
+            resp = client.scan(**kwargs)
+            for item in resp.get('Items', []):
+                flat = {k: list(v.values())[0] for k, v in item.items()}
+                # Normalizar tipos
+                for campo in ('timestamp',):
+                    if campo in flat:
+                        try:
+                            flat[campo] = int(flat[campo])
+                        except (ValueError, TypeError):
+                            pass
+                for campo in ('verified',):
+                    if campo in flat:
+                        flat[campo] = flat[campo] in (True, 'true', 'True', '1')
+                items.append(flat)
+            last = resp.get('LastEvaluatedKey')
+            if not last:
+                break
+            kwargs['ExclusiveStartKey'] = last
+        return _procesar_registros(items)
+    except Exception as e:
+        logger.error(f'obtener_todas_asistencias_dynamo: {e}')
+        return []
+
+
 def obtener_asistencias_usuario(user_id: str) -> list:
     """Retorna asistencias de un usuario específico desde AWS."""
     result = _request('GET', f'/attendance/{user_id}')

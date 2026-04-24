@@ -9316,7 +9316,7 @@ def asistencias_dashboard(request):
     total_presentes_aws = 0
 
     try:
-        registros_aws = aws_service.obtener_asistencias_proyecto(None) or []
+        registros_aws = aws_service.obtener_todas_asistencias_dynamo() or []
         # Agrupar por (userId, fecha)
         grupos = defaultdict(lambda: {'nombre': '', 'proyecto_id': '', 'marcas': {}})
         for r in registros_aws:
