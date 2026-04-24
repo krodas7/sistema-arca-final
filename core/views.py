@@ -8,6 +8,7 @@ from django.db.models import Sum, Count, Q, F, Avg
 from django.db.models.functions import Extract
 from django.utils import timezone
 from django.views.decorators.http import require_http_methods, require_GET
+from django.views.decorators.csrf import csrf_exempt
 from datetime import datetime, timedelta
 from decimal import Decimal
 from django.core.cache import cache
@@ -9136,3 +9137,125 @@ def asistencia_delete(request, asistencia_id):
         return redirect('asistencias_list')
     
     return render(request, 'core/asistencias/delete.html', {'asistencia': asistencia})
+
+
+# ==================== INTEGRACIÓN AWS ====================
+
+@login_required
+def asistencias_moviles_dashboard(request):
+    """Dashboard de asistencias registradas desde la app móvil (AWS)."""
+    from core.models import Proyecto
+    from core import aws_service
+
+    proyectos = Proyecto.objects.filter(activo=True).order_by('nombre')
+    proyecto_id = request.GET.get('proyecto')
+    proyecto_sel = None
+    asistencias_aws = []
+    error_aws = None
+
+    if proyecto_id:
+        try:
+            proyecto_sel = Proyecto.objects.get(id=proyecto_id, activo=True)
+            asistencias_aws = aws_service.obtener_asistencias_proyecto(proyecto_id)
+        except Proyecto.DoesNotExist:
+            pass
+        except Exception as e:
+            error_aws = str(e)
+
+    context = {
+        'proyectos': proyectos,
+        'proyecto_sel': proyecto_sel,
+        'asistencias_aws': asistencias_aws,
+        'error_aws': error_aws,
+        'total_registros': len(asistencias_aws),
+    }
+    return render(request, 'core/asistencias/moviles_dashboard.html', context)
+
+
+@login_required
+def geocerca_proyecto_guardar(request, proyecto_id):
+    """Guarda la geocerca de un proyecto en AWS desde el sistema admin."""
+    from core.models import Proyecto
+    from core import aws_service
+
+    proyecto = get_object_or_404(Proyecto, id=proyecto_id)
+
+    if request.method == 'POST':
+        tipo = request.POST.get('tipo_geocerca')
+
+        if tipo == 'circulo':
+            try:
+                lat = float(request.POST.get('lat', '').replace(',', '.'))
+                lng = float(request.POST.get('lng', '').replace(',', '.'))
+                radio = float(request.POST.get('radio_metros', '100').replace(',', '.'))
+            except ValueError:
+                messages.error(request, '❌ Coordenadas inválidas. Verifica los valores ingresados.')
+                return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+
+            result = aws_service.guardar_geocerca_circulo(proyecto_id, lat, lng, radio)
+
+        elif tipo == 'poligono':
+            coords_json = request.POST.get('coordenadas_json', '[]')
+            try:
+                import json as json_mod
+                coordenadas = json_mod.loads(coords_json)
+                if len(coordenadas) < 3:
+                    messages.error(request, '❌ El polígono debe tener al menos 3 puntos.')
+                    return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+            except Exception:
+                messages.error(request, '❌ Formato de coordenadas inválido.')
+                return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+
+            result = aws_service.guardar_geocerca_poligono(proyecto_id, coordenadas)
+
+        else:
+            messages.error(request, '❌ Tipo de geocerca no válido.')
+            return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+
+        if result['ok']:
+            messages.success(request, f'✅ Geocerca configurada correctamente para "{proyecto.nombre}".')
+            logger.info(f'Geocerca guardada para proyecto {proyecto_id} por usuario {request.user}')
+        else:
+            messages.error(request, f'❌ Error al guardar geocerca en AWS: {result.get("error", "Error desconocido")}')
+
+    return redirect('proyecto_dashboard', proyecto_id=proyecto_id)
+
+
+@csrf_exempt
+def aws_webhook_registro_usuario(request):
+    """Webhook que recibe notificaciones de AWS cuando se registra un usuario en la app móvil."""
+    import hashlib
+    import hmac
+    import json as json_mod
+    from django.conf import settings
+
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+
+    # Verificar secreto del webhook
+    secret = getattr(settings, 'AWS_WEBHOOK_SECRET', '')
+    received_secret = request.headers.get('X-Webhook-Secret', '')
+    if secret and received_secret != secret:
+        logger.warning(f'Webhook AWS rechazado: secreto inválido desde {request.META.get("REMOTE_ADDR")}')
+        return JsonResponse({'ok': False, 'error': 'No autorizado'}, status=401)
+
+    try:
+        body = json_mod.loads(request.body.decode('utf-8'))
+        user_id = body.get('userId')
+        name = body.get('name')
+        email = body.get('email')
+        project_id = body.get('projectId')
+        photo_url = body.get('photoUrl')
+
+        logger.info(f'Webhook AWS: usuario registrado - ID={user_id}, nombre={name}, proyecto={project_id}')
+
+        # Aquí se puede crear el registro en Django si se desea sincronizar
+        # Por ahora solo logueamos la notificación
+        return JsonResponse({
+            'ok': True,
+            'message': f'Usuario {name} recibido correctamente'
+        })
+
+    except Exception as e:
+        logger.error(f'Error procesando webhook AWS: {e}')
+        return JsonResponse({'ok': False, 'error': str(e)}, status=500)

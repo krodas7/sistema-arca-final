@@ -298,3 +298,8 @@ LOGGING = {
 # Crear directorio de logs si no existe
 LOGS_DIR = BASE_DIR / 'logs'
 LOGS_DIR.mkdir(exist_ok=True)
+
+# ==================== INTEGRACIÓN AWS ====================
+AWS_API_BASE_URL = os.environ.get('AWS_API_BASE_URL', 'https://g8xnz2vrs1.execute-api.us-east-2.amazonaws.com/prod')
+AWS_WEBHOOK_SECRET = os.environ.get('AWS_WEBHOOK_SECRET', 'arca-webhook-secret-2026')
+AWS_API_TIMEOUT = int(os.environ.get('AWS_API_TIMEOUT', '10'))

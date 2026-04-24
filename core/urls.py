@@ -287,4 +287,9 @@ urlpatterns = [
     path('asistencias/<int:asistencia_id>/', views.asistencia_detail, name='asistencia_detail'),
     path('asistencias/<int:asistencia_id>/editar/', views.asistencia_edit, name='asistencia_edit'),
     path('asistencias/<int:asistencia_id>/eliminar/', views.asistencia_delete, name='asistencia_delete'),
+
+    # ==================== INTEGRACIÓN AWS (APP MÓVIL) ====================
+    path('asistencias/moviles/', views.asistencias_moviles_dashboard, name='asistencias_moviles_dashboard'),
+    path('proyectos/<int:proyecto_id>/geocerca/guardar/', views.geocerca_proyecto_guardar, name='geocerca_proyecto_guardar'),
+    path('api/aws/webhook/registro-usuario/', views.aws_webhook_registro_usuario, name='aws_webhook_registro_usuario'),
 ]

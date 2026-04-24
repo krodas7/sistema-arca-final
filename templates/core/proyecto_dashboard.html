@@ -619,6 +619,130 @@
     </div>
 </div>
 
+<!-- ==================== PANEL GEOCERCA (App Móvil) ==================== -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header d-flex justify-content-between align-items-center py-3"
+                 style="background: linear-gradient(135deg,#1e3a5f,#2563eb); color:white; border-radius: 8px 8px 0 0;">
+                <h6 class="mb-0 fw-semibold">
+                    <i class="fas fa-map-marker-alt me-2"></i>Geocerca — App Móvil de Asistencias
+                </h6>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'asistencias_moviles_dashboard' %}?proyecto={{ proyecto.id }}"
+                       class="btn btn-sm btn-light">
+                        <i class="fas fa-mobile-alt me-1"></i>Ver asistencias del proyecto
+                    </a>
+                    <button class="btn btn-sm btn-outline-light" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#geocercaPanel">
+                        <i class="fas fa-cog me-1"></i>Configurar geocerca
+                    </button>
+                </div>
+            </div>
+
+            <div class="collapse" id="geocercaPanel">
+                <div class="card-body">
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Define la zona permitida para registrar asistencias desde la app. Solo los trabajadores
+                        dentro de esta área podrán marcar entrada/salida. El ID del proyecto en AWS es
+                        <strong>{{ proyecto.id }}</strong>.
+                    </p>
+
+                    <!-- Tabs tipo/círculo/polígono -->
+                    <ul class="nav nav-tabs mb-3" id="geocercaTabs">
+                        <li class="nav-item">
+                            <a class="nav-link active" data-bs-toggle="tab" href="#tabCirculo">
+                                <i class="fas fa-circle me-1"></i>Círculo
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" data-bs-toggle="tab" href="#tabPoligono">
+                                <i class="fas fa-draw-polygon me-1"></i>Polígono
+                            </a>
+                        </li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Círculo -->
+                        <div class="tab-pane fade show active" id="tabCirculo">
+                            <form method="post" action="{% url 'geocerca_proyecto_guardar' proyecto.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="tipo_geocerca" value="circulo">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold">Latitud <span class="text-danger">*</span></label>
+                                        <input type="text" name="lat" class="form-control"
+                                               placeholder="ej: 15.6356" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold">Longitud <span class="text-danger">*</span></label>
+                                        <input type="text" name="lng" class="form-control"
+                                               placeholder="ej: -90.5069" required>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-semibold">Radio (metros) <span class="text-danger">*</span></label>
+                                        <input type="number" name="radio_metros" class="form-control"
+                                               placeholder="100" min="10" step="10" value="100" required>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button type="submit" class="btn btn-primary w-100">
+                                            <i class="fas fa-save me-1"></i>Guardar geocerca
+                                        </button>
+                                    </div>
+                                </div>
+                                <small class="text-muted mt-2 d-block">
+                                    <i class="fas fa-lightbulb me-1 text-warning"></i>
+                                    Puedes obtener las coordenadas desde
+                                    <a href="https://maps.google.com" target="_blank">Google Maps</a>
+                                    (clic derecho → "¿Qué hay aquí?").
+                                </small>
+                            </form>
+                        </div>
+
+                        <!-- Polígono -->
+                        <div class="tab-pane fade" id="tabPoligono">
+                            <form method="post" action="{% url 'geocerca_proyecto_guardar' proyecto.id %}"
+                                  id="formPoligono">
+                                {% csrf_token %}
+                                <input type="hidden" name="tipo_geocerca" value="poligono">
+                                <input type="hidden" name="coordenadas_json" id="coordenadasJson">
+
+                                <div id="puntosPoligono">
+                                    <div class="row g-2 mb-2 punto-row">
+                                        <div class="col-5"><input type="text" class="form-control punto-lat" placeholder="Lat punto 1"></div>
+                                        <div class="col-5"><input type="text" class="form-control punto-lng" placeholder="Lng punto 1"></div>
+                                        <div class="col-2"><button type="button" class="btn btn-outline-danger btn-sm w-100 btn-remove-punto" disabled><i class="fas fa-times"></i></button></div>
+                                    </div>
+                                    <div class="row g-2 mb-2 punto-row">
+                                        <div class="col-5"><input type="text" class="form-control punto-lat" placeholder="Lat punto 2"></div>
+                                        <div class="col-5"><input type="text" class="form-control punto-lng" placeholder="Lng punto 2"></div>
+                                        <div class="col-2"><button type="button" class="btn btn-outline-danger btn-sm w-100 btn-remove-punto" disabled><i class="fas fa-times"></i></button></div>
+                                    </div>
+                                    <div class="row g-2 mb-2 punto-row">
+                                        <div class="col-5"><input type="text" class="form-control punto-lat" placeholder="Lat punto 3"></div>
+                                        <div class="col-5"><input type="text" class="form-control punto-lng" placeholder="Lng punto 3"></div>
+                                        <div class="col-2"><button type="button" class="btn btn-outline-danger btn-sm w-100 btn-remove-punto"><i class="fas fa-times"></i></button></div>
+                                    </div>
+                                </div>
+                                <div class="d-flex gap-2 mt-2">
+                                    <button type="button" id="btnAgregarPunto" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-plus me-1"></i>Agregar punto
+                                    </button>
+                                    <button type="submit" class="btn btn-primary btn-sm" id="btnGuardarPoligono">
+                                        <i class="fas fa-save me-1"></i>Guardar polígono
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- ==================== FIN PANEL GEOCERCA ==================== -->
+
 <script>
 $(document).ready(function() {
     // Inicializar tooltips
@@ -630,6 +754,41 @@ $(document).ready(function() {
         if (proyectoId) {
             window.location.href = '/proyecto/' + proyectoId + '/dashboard/';
         }
+    });
+
+    // Polígono — agregar punto
+    let puntoCount = 3;
+    $('#btnAgregarPunto').on('click', function() {
+        puntoCount++;
+        const row = `<div class="row g-2 mb-2 punto-row">
+            <div class="col-5"><input type="text" class="form-control punto-lat" placeholder="Lat punto ${puntoCount}"></div>
+            <div class="col-5"><input type="text" class="form-control punto-lng" placeholder="Lng punto ${puntoCount}"></div>
+            <div class="col-2"><button type="button" class="btn btn-outline-danger btn-sm w-100 btn-remove-punto"><i class="fas fa-times"></i></button></div>
+        </div>`;
+        $('#puntosPoligono').append(row);
+    });
+
+    // Polígono — remover punto
+    $(document).on('click', '.btn-remove-punto', function() {
+        $(this).closest('.punto-row').remove();
+    });
+
+    // Polígono — submit: armar JSON de coordenadas
+    $('#formPoligono').on('submit', function(e) {
+        const coords = [];
+        $('.punto-row').each(function() {
+            const lat = parseFloat($(this).find('.punto-lat').val().replace(',', '.'));
+            const lng = parseFloat($(this).find('.punto-lng').val().replace(',', '.'));
+            if (!isNaN(lat) && !isNaN(lng)) {
+                coords.push([lat, lng]);
+            }
+        });
+        if (coords.length < 3) {
+            e.preventDefault();
+            alert('El polígono necesita al menos 3 puntos válidos.');
+            return;
+        }
+        $('#coordenadasJson').val(JSON.stringify(coords));
     });
 });
 </script>
